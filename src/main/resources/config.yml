@@ -1,0 +1,26 @@
+# Time in minutes between saving marks in worlds and player's data
+# Values less than 1 disables repeating saving
+save-timer: 5
+
+# In dungeon session builder settings
+builder:
+
+  # Max chunk load and edit per tick
+  # 0 and negative values disables limit
+  # Default: 8
+  max-chunk-builder: 8
+
+  # Max block place per chunk each tick
+  # 0 and negative values disables limit
+  # Default: 1000
+  max-block-place: 1000
+
+  # Max entity spawn per chunk each tick
+  # 0 and negative values disables limit
+  # Default: 100
+  max-entity-spawn: 100
+
+# Min log level which messages will be printed for players with "dungeonbl.log" permission
+# Allowed values: INFO, WARN, ERROR, OFF
+# Default: WARN
+log-level: WARN

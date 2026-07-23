@@ -1,0 +1,156 @@
+plugins {
+    id 'java'
+    id("com.gradleup.shadow") version "9.5.1"
+    id("xyz.jpenilla.run-paper") version "3.0.2"
+}
+
+group = "org.hotwop"
+version = "1.0"
+
+repositories {
+    mavenCentral()
+
+
+    maven {
+        name = "mojang"
+        url = "https://libraries.minecraft.net"
+    }
+
+    maven {
+        name = "CodeMC"
+        url = "https://repo.codemc.io/repository/maven-public/"
+    }
+
+    maven {
+        name = "papermc"
+        url = "https://repo.papermc.io/repository/maven-public/"
+    }
+
+    maven {
+        name = "lumine"
+        url = 'https://mvn.lumine.io/repository/maven-public/'
+    }
+
+    maven {
+        name = "jitpack"
+        url = 'https://jitpack.io'
+    }
+
+    maven {
+        name = "extendedclip"
+        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
+    }
+}
+
+dependencies {
+    compileOnly(libs.paper.api)
+
+    compileOnly(libs.mythic.mobs)
+    compileOnly(libs.vault.api)
+    compileOnly(libs.placeholder.api)
+
+    compileOnly(libs.configurate)
+    implementation(libs.nbt.api)
+    implementation(libs.commandapi.paper)
+
+    implementation(project(":core")){ transitive=false }
+
+    mc_mapping_versions.split(',')
+        .each{
+            implementation(project(":versioned:$it")){ transitive=false }
+        }
+    mc_noreobf_versions.split(',')
+        .each{
+            implementation(project(path:":versioned:$it",configuration:"noreobf")){ transitive=false }
+        }
+}
+
+def targetJavaVersion = 21
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release.set(targetJavaVersion)
+}
+
+tasks{
+    shadowJar{
+        relocate("dev.jorel.commandapi","io.hotwop.dungeonbl.commandapi")
+        relocate("de.tr7zw.changeme.nbtapi", "io.hotwop.dungeonbl.nbtapi")
+    }
+    runServer{
+        group=null
+    }
+}
+
+subprojects {
+    group="io.hotwop"
+
+    apply{
+        plugin("java")
+    }
+
+    repositories {
+        mavenCentral()
+        maven {
+            name = "papermc-repo"
+            url = "https://repo.papermc.io/repository/maven-public/"
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release.set(targetJavaVersion)
+    }
+
+    java{
+        def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+        sourceCompatibility = javaVersion
+        targetCompatibility = javaVersion
+        if (JavaVersion.current() < javaVersion) {
+            toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+        }
+    }
+}
+
+mc_21_run_versions.split(',').each { vers->
+   tasks.register("runPaper$vers"){
+       group="run"
+       dependsOn(runServer{
+           runDirectory(file("run/$vers"))
+           minecraftVersion(vers)
+       })
+   }
+}
+
+mc_25_run_versions.split(',').each {vers->
+    tasks.register("runPaper$vers"){
+        group="run"
+        dependsOn(runServer{
+            runDirectory(file("run/$vers"))
+            minecraftVersion(vers)
+        })
+        (runServer as JavaExec).javaLauncher=javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(25)
+        }
+    }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset='UTF-8'
+    filesMatching('paper-plugin.yml') {
+        expand props
+    }
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}

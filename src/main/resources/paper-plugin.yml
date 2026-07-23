@@ -1,0 +1,64 @@
+name: "DungeonBuilder"
+version: '$version'
+authors: [ hotwop ]
+
+main: io.hotwop.dungeonbl.DungeonBl
+api-version: '1.21.1'
+bootstrapper: io.hotwop.dungeonbl.DBlBootstrap
+
+dependencies:
+  server:
+    Vault:
+      load: BEFORE
+      required: false
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+    MythicMobs:
+      required: false
+    Multiverse-Core:
+      load: AFTER
+      required: false
+      join-classpath: false
+
+permissions:
+  dungeonbl.*:
+    description: "All DungeonBuilder permissions"
+    children:
+      dungeonbl.command.*: true
+      dungeonbl.enter_dungeon: true
+      dungeonbl.admin_vision: true
+      dungeonbl.log: true
+  dungeonbl.command.*:
+    description: "All DungeonBuilder command permissions"
+    children:
+      dungeonbl.command.session: true
+      dungeonbl.command.dungeon: true
+      dungeonbl.command.build: true
+      dungeonbl.command.items: true
+      dungeonbl.command.mob: true
+      dungeonbl.command.reload: true
+      dungeonbl.command.save: true
+
+  dungeonbl.command.session:
+    description: "Session control"
+  dungeonbl.command.dungeon:
+    description: "Dungeon control"
+  dungeonbl.command.build:
+    description: "Buildings command"
+  dungeonbl.command.items:
+    description: "Items command"
+  dungeonbl.command.mob:
+      description: "Mob command"
+  dungeonbl.command.reload:
+    description: "Reload command"
+  dungeonbl.command.save:
+    description: "Save command"
+
+  dungeonbl.enter_dungeon:
+    description: "Allow to get in sessions"
+    default: true
+  dungeonbl.admin_vision:
+    description: "Allow to see marks"
+  dungeonbl.log:
+    description: "Allow to see DungeonBuilder log"

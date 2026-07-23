@@ -1,0 +1,17 @@
+[versions]
+commandapi = "11.2.0"
+nbt-api = "2.15.7"
+configurate = "4.2.0"
+paper-api = "1.21.1-R0.1-SNAPSHOT"
+mythic-mobs = "5.6.1"
+vault-api = "1.7"
+placeholder-api = "2.11.6"
+
+[libraries]
+commandapi-paper = { module = "dev.jorel:commandapi-paper-shade", version.ref = "commandapi" }
+nbt-api = { module = "de.tr7zw:item-nbt-api", version.ref = "nbt-api" }
+configurate = { module = "org.spongepowered:configurate-yaml", version.ref = "configurate" }
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api" }
+mythic-mobs = { module = "io.lumine:Mythic-Dist", version.ref = "mythic-mobs" }
+vault-api = { module = "com.github.MilkBowl:VaultAPI", version.ref = "vault-api" }
+placeholder-api = { module = "me.clip:placeholderapi", version.ref = "placeholder-api" }

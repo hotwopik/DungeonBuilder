@@ -1,0 +1,18 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        maven{
+            url="https://repo.papermc.io/repository/maven-public/"
+        }
+    }
+}
+
+rootProject.name = 'DungeonBuilder'
+
+include(":core")
+
+mc_mapping_versions.split(',')
+    .each{include(":versioned:$it")}
+mc_noreobf_versions.split(',')
+    .each{include(":versioned:$it")}
