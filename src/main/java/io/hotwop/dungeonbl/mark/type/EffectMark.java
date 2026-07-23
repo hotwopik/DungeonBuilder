@@ -10,7 +10,7 @@ import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.codec.MarkData;
 import io.hotwop.dungeonbl.mark.place.PotionData;
-import io.hotwop.dungeonbl.session.collector.InRoomCollector;
+import io.hotwop.dungeonbl.session.RoomCollector;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import io.hotwop.dungeonbl.session.RoomSession;
 import io.hotwop.dungeonbl.util.math.Vec3;
@@ -35,8 +35,7 @@ public final class EffectMark extends DungeonMark<EffectMark, PotionData>{
             RoomTypePredicate.ALL,
             EffectMark::placing,
             PotionData::new,
-            PotionData.class,
-            InRoomCollector.class
+            PotionData.class
         ),
         ArgumentContext.builder()
             .define("duration",int.class,int.class,(num,ctx)->num,name->new IntegerArgument(name,-1))
@@ -77,7 +76,7 @@ public final class EffectMark extends DungeonMark<EffectMark, PotionData>{
         DBlUtil.drawParticleLine(particle,world,players,start1,zVector,0.25);
     }
 
-    private static void placing(PotionData data, Vec3 pos, RoomSession.Builder room, InRoomCollector collector){
+    private static void placing(PotionData data, Vec3 pos, RoomSession.Builder room, RoomCollector collector){
         PotionEffect effect=new PotionEffect(data.effectType(),data.duration(),data.amplifier(),true,true);
         
         collector.addEvent(RoomEvent.activation,(location,session)->{

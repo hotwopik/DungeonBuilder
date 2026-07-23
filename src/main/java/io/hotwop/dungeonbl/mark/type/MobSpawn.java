@@ -12,7 +12,7 @@ import io.hotwop.dungeonbl.mark.codec.MarkData;
 import io.hotwop.dungeonbl.mark.place.MobSpawnData;
 import io.hotwop.dungeonbl.mob.CrossMobList;
 import io.hotwop.dungeonbl.session.DungeonBuildException;
-import io.hotwop.dungeonbl.session.collector.InRoomCollector;
+import io.hotwop.dungeonbl.session.RoomCollector;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import io.hotwop.dungeonbl.util.ArrowDrawer;
 import io.hotwop.dungeonbl.util.math.Vec3;
@@ -39,8 +39,7 @@ public final class MobSpawn extends DungeonMark<MobSpawn, MobSpawnData> implemen
             RoomTypePredicate.ALL,
             MobSpawn::placing,
             MobSpawnData::new,
-            MobSpawnData.class,
-            InRoomCollector.class
+            MobSpawnData.class
         ),
         ArgumentContext.builder()
             .define("positive",int.class,int.class,(num,ctx)->num,name->new IntegerArgument(name,0))
@@ -90,7 +89,7 @@ public final class MobSpawn extends DungeonMark<MobSpawn, MobSpawnData> implemen
         arrowDrawer.draw(players);
     }
 
-    private static void placing(MobSpawnData data, Vec3 pos, RoomSession.Builder room, InRoomCollector collector){
+    private static void placing(MobSpawnData data, Vec3 pos, RoomSession.Builder room, RoomCollector collector){
         CrossMobList pools=room.room.mobs();
         if(pools==null||data.pool()>=pools.list.size()){
             DungeonBl.logger

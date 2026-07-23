@@ -9,9 +9,8 @@ import io.hotwop.dungeonbl.mark.dungeon.DungeonMarkData;
 import io.hotwop.dungeonbl.mark.RoomTypePredicate;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
-import io.hotwop.dungeonbl.mark.place.NoneData;
 import io.hotwop.dungeonbl.mark.place.TriggerData;
-import io.hotwop.dungeonbl.session.collector.InRoomCollector;
+import io.hotwop.dungeonbl.session.RoomCollector;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import io.hotwop.dungeonbl.session.RoomSession;
 import io.hotwop.dungeonbl.util.math.Vec3;
@@ -36,8 +35,7 @@ public final class RedstoneTrigger extends DungeonMark<RedstoneTrigger, TriggerD
             RoomTypePredicate.ALL,
             RedstoneTrigger::placing,
             TriggerData::new,
-            TriggerData.class,
-            InRoomCollector.class
+            TriggerData.class
         ),
         ArgumentContext.builder()
             .define("valid_id",String.class,String.class,(val,ctx)->val,DBlCommand::validIdArgument)
@@ -67,7 +65,7 @@ public final class RedstoneTrigger extends DungeonMark<RedstoneTrigger, TriggerD
         world.spawnParticle(Particle.DUST,players,null,location.x()+0.5,location.y()+.5,location.z()+0.5,1,0,0,0,0,particle,false);
     }
 
-    protected static void placing(TriggerData data, Vec3 pos, RoomSession.Builder room, InRoomCollector collector){
+    protected static void placing(TriggerData data, Vec3 pos, RoomSession.Builder room, RoomCollector collector){
         collector.addEvent(RoomEvent.tick,(loc,session)->{
             BlockData block=loc.getBlock().getBlockData();
 

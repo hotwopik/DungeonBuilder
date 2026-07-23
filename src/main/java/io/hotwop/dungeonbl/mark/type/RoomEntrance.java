@@ -12,7 +12,7 @@ import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.codec.MarkData;
 import io.hotwop.dungeonbl.session.DungeonBuildException;
-import io.hotwop.dungeonbl.session.collector.RoomBuildingCollector;
+import io.hotwop.dungeonbl.session.RoomCollector;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -36,8 +36,7 @@ public final class RoomEntrance extends DungeonMark<RoomEntrance, DoorwayData> i
             RoomTypePredicate.BASE_END,
             RoomEntrance::placing,
             DoorwayData::new,
-            DoorwayData.class,
-            RoomBuildingCollector.class
+            DoorwayData.class
         ),
         ArgumentContext.builder()
             .define("doorway",String.class,String.class,(nam,ctx)->nam,name->DBlCommand
@@ -95,7 +94,7 @@ public final class RoomEntrance extends DungeonMark<RoomEntrance, DoorwayData> i
         display.draw(players);
     }
 
-    private static void placing(DoorwayData data, Vec3 pos, RoomSession.Builder room, RoomBuildingCollector collector){
+    private static void placing(DoorwayData data, Vec3 pos, RoomSession.Builder room, RoomCollector collector){
         SideRotation rot=data.rotation();
         if(!(
             (pos.x()==0&&rot==SideRotation.R270)||

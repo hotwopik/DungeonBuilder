@@ -13,7 +13,6 @@ import io.hotwop.dungeonbl.mark.MarkType;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.dungeon.DungeonMark;
 import io.hotwop.dungeonbl.mark.dungeon.DungeonMarkData;
-import io.hotwop.dungeonbl.mark.dungeon.LoadOrder;
 import io.hotwop.dungeonbl.mark.place.MarkPlaceData;
 import io.hotwop.dungeonbl.structure.builder.WorldBuilder;
 import io.hotwop.dungeonbl.structure.container.StructureContainer;
@@ -29,7 +28,7 @@ public final class RoomBuilding {
     public final StructureContainer container;
     public final Map<Vec3, MarkSavedData> marks;
 
-    public final Map<LoadOrder,Map<DungeonMarkData<?,?,?>,Map<Vec3,MarkSavedData>>> markTypesCache;
+    public final Map<DungeonMarkData<?,?>,Map<Vec3,MarkSavedData>> markTypesCache;
 
     public record MarkSavedData(
         MarkCodec<?> codec,
@@ -51,20 +50,19 @@ public final class RoomBuilding {
             if (entry.getValue().codec.dungeon == null) throw new IllegalArgumentException("Mark type is invalid");
         }
 
-        Map<LoadOrder,Map<DungeonMarkData<?,?,?>,Map<Vec3,MarkSavedData>>> cache = new HashMap<>();
-        marks.forEach((key, mark)->cache
-            .computeIfAbsent(mark.codec.dungeon.loadOrder,k->new HashMap<>())
-            .computeIfAbsent(mark.codec.dungeon,k->new HashMap<>())
-            .put(key,mark)
+        Map<DungeonMarkData<?,?>,Map<Vec3,MarkSavedData>> markTypes=new HashMap<>();
+        marks.forEach((pos,mark)->{
+            markTypes
+                .computeIfAbsent(mark.codec.dungeon,k->new HashMap<>())
+                .put(pos,mark);
+        });
+
+        Map<DungeonMarkData<?,?>,Map<Vec3,MarkSavedData>> markTypesCooked=new HashMap<>();
+        markTypes.forEach((type,map)->markTypesCooked
+            .put(type,Map.copyOf(map))
         );
 
-        Map<LoadOrder,Map<DungeonMarkData<?,?,?>,Map<Vec3,MarkSavedData>>> cacheOut=new HashMap<>();
-        cache.forEach((key, types)->{
-            Map<DungeonMarkData<?,?,?>,Map<Vec3,MarkSavedData>> typesOut=new HashMap<>();
-            types.forEach((type,mks)->typesOut.put(type,Map.copyOf(mks)));
-            cacheOut.put(key,Map.copyOf(typesOut));
-        });
-        markTypesCache=Map.copyOf(cacheOut);
+        this.markTypesCache=Map.copyOf(markTypesCooked);
     }
 
     public Vec3 size() {

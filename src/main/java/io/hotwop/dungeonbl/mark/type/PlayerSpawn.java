@@ -8,7 +8,7 @@ import io.hotwop.dungeonbl.mark.RoomTypePredicate;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.place.RotationData;
-import io.hotwop.dungeonbl.session.collector.InRoomCollector;
+import io.hotwop.dungeonbl.session.RoomCollector;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import io.hotwop.dungeonbl.util.ArrowDrawer;
 import io.hotwop.dungeonbl.util.math.Vec3;
@@ -32,8 +32,7 @@ public final class PlayerSpawn extends DungeonMark<PlayerSpawn, RotationData> im
             RoomTypePredicate.ALL,
             PlayerSpawn::placing,
             RotationData::new,
-            RotationData.class,
-            InRoomCollector.class
+            RotationData.class
         )
     );
 
@@ -76,7 +75,7 @@ public final class PlayerSpawn extends DungeonMark<PlayerSpawn, RotationData> im
         arrowDrawer.draw(players);
     }
 
-    private static boolean placing(RotationData data , Vec3 pos, RoomSession.Builder room, InRoomCollector collector){
+    private static boolean placing(RotationData data , Vec3 pos, RoomSession.Builder room, RoomCollector collector){
         collector.addEvent(RoomEvent.activation,(loc,session)->{
             loc.add(.5,0,.5);
             loc.setYaw(data.rotation().add(session.rotation).degrees);

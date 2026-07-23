@@ -7,7 +7,7 @@ import io.hotwop.dungeonbl.mark.RoomTypePredicate;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.place.RotationData;
-import io.hotwop.dungeonbl.session.collector.InRoomCollector;
+import io.hotwop.dungeonbl.session.RoomCollector;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import io.hotwop.dungeonbl.util.ArrowDrawer;
 import io.hotwop.dungeonbl.util.math.Vec3;
@@ -40,8 +40,7 @@ public final class BossSpawn extends DungeonMark<BossSpawn, RotationData> implem
             RoomTypePredicate.ALL,
             BossSpawn::placing,
             RotationData::new,
-            RotationData.class,
-            InRoomCollector.class
+            RotationData.class
         )
     );
     public MarkCodec<BossSpawn> markType() {
@@ -83,7 +82,7 @@ public final class BossSpawn extends DungeonMark<BossSpawn, RotationData> implem
         return rotation;
     }
 
-    private static void placing(RotationData data, Vec3 pos, RoomSession.Builder roomBuilder, InRoomCollector collector) {
+    private static void placing(RotationData data, Vec3 pos, RoomSession.Builder roomBuilder, RoomCollector collector) {
         collector.addEvent(RoomEvent.activation, (location, room) -> {
             if (!room.bossIterator.hasNext())return;
             location.setYaw(data.rotation().add(room.rotation).degrees);

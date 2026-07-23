@@ -2,10 +2,8 @@ package io.hotwop.dungeonbl.session;
 
 import io.hotwop.dungeonbl.io.DBlRegistries;
 import io.hotwop.dungeonbl.mark.dungeon.DungeonMarkData;
-import io.hotwop.dungeonbl.mark.dungeon.LoadOrder;
 import io.hotwop.dungeonbl.mob.Boss;
 import io.hotwop.dungeonbl.mob.BossEntity;
-import io.hotwop.dungeonbl.session.collector.*;
 import io.hotwop.dungeonbl.session.event.EventConsumer;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import io.hotwop.dungeonbl.structure.Decoration;
@@ -23,7 +21,7 @@ import io.hotwop.dungeonbl.structure.RoomBuilding;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiPredicate;
+import java.util.function.BiConsumer;
 
 import static io.hotwop.dungeonbl.DungeonBl.logger;
 
@@ -279,8 +277,6 @@ public final class RoomSession{
         private Set<Vec2> chunks;
         private Vec3 pos;
 
-        private boolean placementStep=false;
-
         private RoomSession result=null;
         private final List<Builder> children=new ArrayList<>();
         private final ListView<Builder> childrenView=new ListView<>(children);
@@ -323,66 +319,78 @@ public final class RoomSession{
             sizeZ=size.z();
         }
 
-        protected boolean isChecked(){
-            return checked;
-        }
-
-        protected void check(){
-            checked=true;
-        }
-
-        public Vec3 pos(){
-            if(!placementStep)throw new RuntimeException("Room Building Step wasn't complete");
-            return pos;
-        }
-
-        public SideRotation rotation(){
-            if(!placementStep)throw new RuntimeException("Room Building Step wasn't complete");
-            return rotation;
-        }
-
-        public Box3 box(){
-            if(!placementStep)throw new RuntimeException("Room Building Step wasn't complete");
-            return box;
+        protected boolean buildRequired(){
+            return !checked;
         }
 
         protected void build() throws DungeonBuildException{
+            checked=true;
+
             Map<RoomEvent,Map<Vec3,EventConsumer>> events=new HashMap<>();
-            List<NextSuggestion> exits=new ArrayList<>();
+            List<RoomCollector.PlacementSuggestion> placements=new ArrayList<>();
+            List<RoomCollector.NextSuggestion> exits=new ArrayList<>();
+
+            BiConsumer<Vec3,RoomCollector> collectorConsumer=(pos,collector)->{
+                RoomCollector.Result result=collector.done();
+                placements.addAll(result.placements());
+                exits.addAll(result.exits());
+                result.events().forEach((e,cons)->events
+                    .computeIfAbsent(e,k->new HashMap<>())
+                    .put(pos,cons)
+                );
+            };
+
+            Random markRandom=builder.randomSource.get("marks");
+
+            var markTypes=roomBuilding.markTypesCache;
+            for(DungeonMarkData<?,?> type:markTypes.keySet()){
+                if(!type.predicate(this.type))continue;
+                Map<Vec3, RoomBuilding.MarkSavedData> marks=markTypes.get(type);
+
+                List<Vec3> positions=new ArrayList<>(marks.keySet());
+                Collections.shuffle(positions,markRandom);
+
+                switch(type.placingType){
+                    case all->{
+                        for(Vec3 pos:positions){
+                            RoomBuilding.MarkSavedData mark=marks.get(pos);
+                            RoomCollector collector=new RoomCollector();
+
+                            type.allPlace(pos,mark.placeData(),this,collector);
+                            if(isCanceled())return;
+
+                            collectorConsumer.accept(pos,collector);
+                        }
+                    }
+                    case finish->{
+                        boolean finished=false;
+                        for(Vec3 pos:positions){
+                            RoomBuilding.MarkSavedData mark=marks.get(pos);
+                            RoomCollector collector=new RoomCollector();
+
+                            finished=type.finishPlace(pos,mark.placeData(),this,collector);
+                            if(isCanceled())return;
+
+                            collectorConsumer.accept(pos,collector);
+                            if(finished)break;
+                        }
+                        if(!finished)return;
+                    }
+                }
+
+            }
 
             if(type==RoomType.START){
                 pos=placeFrom;
                 rotation=placeRotation;
             }else{
-                List<PlacementSuggestion> placements=new ArrayList<>();
-
-                Map<DungeonMarkData<?,?,?>,Map<Vec3, RoomBuilding.MarkSavedData>> buildingMarks=roomBuilding.markTypesCache
-                    .get(LoadOrder.BUILDING);
-
-                shuffleMarks(buildingMarks,(pos,data)->{
-                    RoomBuildingCollector collector=new RoomBuildingCollector();
-                    boolean value=data.codec().dungeon
-                        .place(pos,data.placeData(),this,collector);
-                    RoomBuildingCollector.Result result=collector.done();
-
-                    placements.addAll(result.suggestions());
-                    result.events().forEach((ev,ec)->events
-                        .computeIfAbsent(ev,k->new HashMap<>())
-                        .put(pos,ec)
-                    );
-
-                    return value;
-                });
-
-                if(isCanceled())return;
-
                 if(placements.isEmpty()){
                     logger.warn("Room has no entrance, {} {}",builder.dungeonName,room.building());
                     throw new DungeonBuildException("Room has no entrance");
                 }
 
-                PlacementSuggestion outPlacement=null;
-                for(PlacementSuggestion placement:placements){
+                RoomCollector.PlacementSuggestion outPlacement=null;
+                for(RoomCollector.PlacementSuggestion placement:placements){
                     SideRotation outRot=placeRotation.sub(placement.rotation());
                     Vec3 outPos=placeFrom.add(placement.pos().rotate(outRot));
 
@@ -409,49 +417,7 @@ public final class RoomSession{
             box=Box3.withSizeAndRotation(pos,roomBuilding.size(),rotation);
             chunks=Set.copyOf(box.occupiedChunks());
 
-            placementStep=true;
-
-            Map<DungeonMarkData<?,?,?>,Map<Vec3, RoomBuilding.MarkSavedData>> inRoomMarks=roomBuilding.markTypesCache
-                .get(LoadOrder.IN_ROOM);
-
-            shuffleMarks(inRoomMarks,(pos,data)->{
-                InRoomCollector collector=new InRoomCollector();
-                boolean value=data.codec().dungeon
-                    .place(pos,data.placeData(),this,collector);
-
-                collector.done().forEach((ev,ec)->events
-                    .computeIfAbsent(ev,k->new HashMap<>())
-                    .put(pos,ec)
-                );
-
-                return value;
-            });
-
-            if(isCanceled())return;
-
             if(type!=RoomType.END){
-                Map<DungeonMarkData<?,?,?>,Map<Vec3, RoomBuilding.MarkSavedData>> outRoomMarks=roomBuilding.markTypesCache
-                    .get(LoadOrder.OUT_ROOM);
-
-                shuffleMarks(outRoomMarks,(pos,data)->{
-                    OutRoomCollector collector=new OutRoomCollector();
-                    boolean value=data.codec().dungeon
-                        .place(pos,data.placeData(),this,collector);
-
-                    OutRoomCollector.Result result=collector.done();
-
-                    exits.addAll(result.suggestions());
-
-                    result.events().forEach((ev,ec)->events
-                        .computeIfAbsent(ev,k->new HashMap<>())
-                        .put(pos,ec)
-                    );
-
-                    return value;
-                });
-
-                if(isCanceled())return;
-
                 if(exits.isEmpty()){
                     logger.warn("Room has no exits, {} {}",builder.dungeonName,room.building());
                     throw new DungeonBuildException("Room has no exits");
@@ -462,7 +428,7 @@ public final class RoomSession{
                 if(depth==builder.dungeon.roomCount()){
                     Room endRoom=builder.dungeon.endRoom();
 
-                    for(NextSuggestion next:exits){
+                    for(RoomCollector.NextSuggestion next:exits){
                         RoomSession.Builder nextBuilder=RoomSession.builder(
                             builder,
                             this,
@@ -480,7 +446,7 @@ public final class RoomSession{
                 }else{
                     Random roomRandom=builder.randomSource.get("rooms");
 
-                    for(NextSuggestion next:exits){
+                    for(RoomCollector.NextSuggestion next:exits){
                         Collections.shuffle(rooms,roomRandom);
                         Vec3 position=next.pos()
                             .rotate(rotation)
@@ -518,27 +484,6 @@ public final class RoomSession{
             });
 
             result=new RoomSession(this,Map.copyOf(outTasks));
-        }
-
-        private void shuffleMarks(
-            Map<DungeonMarkData<?,?,?>,Map<Vec3,RoomBuilding.MarkSavedData>> marks,
-            BiPredicate<Vec3,RoomBuilding.MarkSavedData> iterator
-        ){
-            if(marks==null)return;
-            Random marksRandom=builder.randomSource.get("marks");
-
-            List<DungeonMarkData<?,?,?>> types=new ArrayList<>(marks.keySet());
-            Collections.shuffle(types,marksRandom);
-
-            for(DungeonMarkData<?,?,?> type:types){
-                Map<Vec3, RoomBuilding.MarkSavedData> typeMap=marks.get(type);
-
-                List<Vec3> poses=new ArrayList<>(typeMap.keySet());
-                Collections.shuffle(poses,marksRandom);
-                for(Vec3 pos:poses){
-                    if(iterator.test(pos,typeMap.get(pos)))break;
-                }
-            }
         }
 
         public @Nullable RoomSession result(){

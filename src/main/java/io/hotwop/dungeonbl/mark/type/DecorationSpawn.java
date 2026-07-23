@@ -8,7 +8,7 @@ import io.hotwop.dungeonbl.mark.RotatableMark;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.place.RotationData;
-import io.hotwop.dungeonbl.session.collector.InRoomCollector;
+import io.hotwop.dungeonbl.session.RoomCollector;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import io.hotwop.dungeonbl.structure.Decoration;
 import io.hotwop.dungeonbl.util.ArrowDrawer;
@@ -34,8 +34,7 @@ public final class DecorationSpawn extends DungeonMark<DecorationSpawn, Rotation
             RoomTypePredicate.ALL,
             DecorationSpawn::placing,
             RotationData::new,
-            RotationData.class,
-            InRoomCollector.class
+            RotationData.class
         )
     );
 
@@ -63,7 +62,7 @@ public final class DecorationSpawn extends DungeonMark<DecorationSpawn, Rotation
         arrowDrawer.draw(players);
     }
 
-    private static void placing(RotationData data, Vec3 pos, RoomSession.Builder roomBuilder, InRoomCollector collector){
+    private static void placing(RotationData data, Vec3 pos, RoomSession.Builder roomBuilder, RoomCollector collector){
         int size=roomBuilder.decorations.size();
         if(size==0)return;
 

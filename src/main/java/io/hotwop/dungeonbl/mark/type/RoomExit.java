@@ -12,7 +12,7 @@ import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.codec.MarkData;
 import io.hotwop.dungeonbl.session.DungeonBuildException;
-import io.hotwop.dungeonbl.session.collector.OutRoomCollector;
+import io.hotwop.dungeonbl.session.RoomCollector;
 import io.hotwop.dungeonbl.session.event.RoomEvent;
 import io.hotwop.dungeonbl.util.task.DoneTaskResult;
 import org.bukkit.*;
@@ -38,8 +38,7 @@ public final class RoomExit extends DungeonMark<RoomExit, DoorwayData> implement
             RoomTypePredicate.START_BASE,
             RoomExit::placing,
             DoorwayData::new,
-            DoorwayData.class,
-            OutRoomCollector.class
+            DoorwayData.class
         ),
         ArgumentContext.builder()
             .define("doorway",String.class,String.class,(nam,ctx)->nam,name->DBlCommand
@@ -103,7 +102,7 @@ public final class RoomExit extends DungeonMark<RoomExit, DoorwayData> implement
         display.draw(players);
     }
 
-    private static void placing(DoorwayData data, Vec3 pos, RoomSession.Builder room, OutRoomCollector collector){
+    private static void placing(DoorwayData data, Vec3 pos, RoomSession.Builder room, RoomCollector collector){
         SideRotation rot=data.rotation();
         if(!(
             (pos.x()==0&&rot==SideRotation.R90)||
@@ -140,6 +139,6 @@ public final class RoomExit extends DungeonMark<RoomExit, DoorwayData> implement
         Vec3 ps=pos.add(new Vec3(0,0,1).rotate(rot));
         DoneTaskResult<RoomSession> task=new DoneTaskResult<>(placer::set);
 
-        collector.addPlacement(ps,rot,task);
+        collector.addExit(ps,rot,task);
     }
 }

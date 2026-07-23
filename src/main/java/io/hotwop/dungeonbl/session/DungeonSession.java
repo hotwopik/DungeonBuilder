@@ -184,8 +184,7 @@ public final class DungeonSession{
 
         private void build() throws DungeonBuildException{
             while(true){
-                current.check();
-                if(current.result()==null){
+                if(current.buildRequired()){
                     current.build();
 
                     RoomSession result=current.result();
@@ -206,7 +205,7 @@ public final class DungeonSession{
 
                 RoomSession.Builder next=null;
                 for(RoomSession.Builder child:current.children()){
-                    if(!child.isChecked()){
+                    if(child.buildRequired()){
                         next=child;
                         break;
                     }

@@ -16,7 +16,6 @@ import io.hotwop.dungeonbl.mark.Mark;
 import io.hotwop.dungeonbl.mark.MarkType;
 import io.hotwop.dungeonbl.mark.codec.serializer.*;
 import io.hotwop.dungeonbl.mark.place.MarkPlaceData;
-import io.hotwop.dungeonbl.session.collector.RoomCollector;
 import io.hotwop.dungeonbl.util.math.SideRotation;
 import io.hotwop.dungeonbl.util.math.Vec3;
 import org.bukkit.Location;
@@ -104,13 +103,13 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
     }
 
 
-    public static <T extends DungeonMark<T,P>,P extends MarkPlaceData,C extends RoomCollector> MarkCodec<T> createCodec(
+    public static <T extends DungeonMark<T,P>,P extends MarkPlaceData> MarkCodec<T> createCodec(
         String name,
         ItemType item,
         String displayName,
 
         Class<T> clazz,
-        DungeonMarkData<T,P,C> dungeon
+        DungeonMarkData<T,P> dungeon
     ){
         return createCodec(
             name,
@@ -122,13 +121,13 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
             null
         );
     }
-    public static <T extends DungeonMark<T,P>,P extends MarkPlaceData,C extends RoomCollector> MarkCodec<T> createCodec(
+    public static <T extends DungeonMark<T,P>,P extends MarkPlaceData> MarkCodec<T> createCodec(
         String name,
         ItemType item,
         String displayName,
 
         Class<T> clazz,
-        DungeonMarkData<T,P,C> dungeon,
+        DungeonMarkData<T,P> dungeon,
         ArgumentContext arguments
     ){
         return createCodec(
@@ -142,13 +141,13 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
         );
     }
 
-    public static <T extends DungeonMark<T,P>,P extends MarkPlaceData,C extends RoomCollector> MarkCodec<T> createCodec(
+    public static <T extends DungeonMark<T,P>,P extends MarkPlaceData> MarkCodec<T> createCodec(
         String name,
         ItemType item,
         String displayName,
 
         Class<T> clazz,
-        DungeonMarkData<T,P,C> dungeon,
+        DungeonMarkData<T,P> dungeon,
         SerializerContext context,
         ArgumentContext arguments
     ){
@@ -245,7 +244,7 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
     }
 
     public final Class<T> clazz;
-    public final DungeonMarkData<?,?,?> dungeon;
+    public final DungeonMarkData<?,?> dungeon;
     private final ClassInfo<T> classInfo;
 
     private MarkCodec(
@@ -254,7 +253,7 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
         String displayName,
 
         Class<T> clazz,
-        DungeonMarkData<?,?,?> dungeon,
+        DungeonMarkData<?,?> dungeon,
         ClassInfo<T> classInfo
     ){
         super(name,item,displayName);
