@@ -6,12 +6,15 @@ import io.hotwop.dungeonbl.structure.container.EntityData;
 import io.hotwop.dungeonbl.util.math.Vec2;
 import io.hotwop.dungeonbl.util.math.Vec3;
 import io.hotwop.dungeonbl.util.math.Vec3d;
+import it.unimi.dsi.fastutil.longs.*;
 import org.bukkit.Chunk;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 public class AsyncWorldBuilder implements WorldBuilder{
@@ -23,18 +26,47 @@ public class AsyncWorldBuilder implements WorldBuilder{
     public record AsEntityData(
         Vec3d pos,
         EntityData data,
+        @Nullable Vec3 sleepPos,
+        @Nullable Vec3 blockLeash,
         Consumer<Entity> preload
     ){}
 
-    public record ChunkQueue(
-        Queue<AsBlockData> blockQueue,
-        Queue<AsEntityData> entityQueue
+    public record FrameQueues(
+        Queue<AsBlockData> blocks,
+        Queue<AsEntityData> entities,
+        @Nullable AsFrame frame
     ){
         public boolean isEmpty(){
-            return blockQueue.isEmpty() && entityQueue.isEmpty();
+            return blocks.isEmpty() && entities.isEmpty();
         }
     }
 
+    public record ChunkQueue(
+        Long2ObjectSortedMap<FrameQueues> frames
+    ){
+        public boolean isEmpty(){
+            return frames.isEmpty();
+        }
+
+        public FrameQueues getOrCreateFrame(AsFrame frame){
+            return frames.computeIfAbsent(frame==null?-1:frame.id,el->new FrameQueues(
+                new ArrayDeque<>(),
+                new ArrayDeque<>(),
+                frame
+            ));
+        }
+    }
+
+    public record AsFrame(
+        Runnable afterFrame,
+        long id
+    ){}
+
+    // Frames
+    private final AtomicLong lastFrame=new AtomicLong();
+    private final ThreadLocal<AsFrame> currentFrame=new ThreadLocal<>();
+
+    // To place
     private final Set<Vec2> awaits=Collections.synchronizedSet(new HashSet<>());
     private final Map<Vec2,ChunkQueue> queues=new ConcurrentHashMap<>();
     private final Map<Vec2,Chunk> active=new ConcurrentHashMap<>();
@@ -57,27 +89,53 @@ public class AsyncWorldBuilder implements WorldBuilder{
         return world;
     }
 
+    @Override
+    public void beginFrame(Runnable afterFrame){
+        currentFrame.set(new AsFrame(
+            afterFrame,lastFrame.getAndIncrement()
+        ));
+    }
+
+    @Override
+    public void finishFrame() {
+        currentFrame.remove();
+    }
+
     private ChunkQueue getOrCreateQueue(Vec2 chunk){
-        return queues.computeIfAbsent(chunk,ch->new ChunkQueue(new ArrayDeque<>(),new ArrayDeque<>()));
+        return queues.computeIfAbsent(chunk,ch->new ChunkQueue(
+            new Long2ObjectLinkedOpenHashMap<>()
+        ));
     }
 
     @Override
     public void place(Vec3 pos, BlockDat data){
+        AsFrame frame=currentFrame.get();
+
         Vec2 chunk=pos.getChunk();
         ChunkQueue queue=getOrCreateQueue(chunk);
         synchronized(queue){
             if(queue.isEmpty())awaits.add(chunk);
-            queue.blockQueue.add(new AsBlockData(pos,data));
+            queue.getOrCreateFrame(frame)
+                .blocks.add(new AsBlockData(pos,data));
         }
     }
 
     @Override
-    public void spawn(Vec3d pos, EntityData data, Consumer<Entity> preload) {
+    public void spawn(
+        Vec3d pos,
+        EntityData data,
+        @Nullable Vec3 sleepPos,
+        @Nullable Vec3 blockLeash,
+        Consumer<Entity> preload
+    ) {
+        AsFrame frame=currentFrame.get();
+
         Vec2 chunk=pos.getChunk();
         ChunkQueue queue=getOrCreateQueue(chunk);
         synchronized(queue){
             if(queue.isEmpty())awaits.add(chunk);
-            queue.entityQueue.add(new AsEntityData(pos,data,preload));
+            queue.getOrCreateFrame(frame)
+                .entities.add(new AsEntityData(pos,data,sleepPos,blockLeash,preload));
         }
     }
 
@@ -91,23 +149,56 @@ public class AsyncWorldBuilder implements WorldBuilder{
                 if(queue.isEmpty()){
                     ended.add(current.getKey());
                 }else{
-                    int maxBlockPlaceValue=maxBlockPlace<=0?queue.blockQueue.size():maxBlockPlace;
-                    for(int i=0;i<maxBlockPlaceValue;i++){
-                        AsBlockData next=queue.blockQueue.poll();
-                        if(next==null)break;
+                    int maxBlockPlaceValue=maxBlockPlace<=0?Integer.MAX_VALUE:maxBlockPlace;
+                    int blocksPlaced=0;
+
+                    List<FrameQueues> blocksFinished=new ArrayList<>(queue.frames.size());
+
+                    Iterator<Long> blockFrameIterator=queue.frames.sequencedKeySet().iterator();
+                    FrameQueues currentFrame=queue.frames.get(blockFrameIterator.next());
+
+                    while(blocksPlaced<maxBlockPlaceValue){
+                        AsBlockData next=currentFrame.blocks.poll();
+                        if(next==null){
+                            blocksFinished.add(currentFrame);
+
+                            if(!blockFrameIterator.hasNext())break;
+                            currentFrame=queue.frames.get(blockFrameIterator.next());
+
+                            continue;
+                        }
+
                         next.data.place(world,next.pos);
+                        blocksPlaced++;
                     }
 
-                    int maxEntitySpawnValue=maxEntitySpawn<=0?queue.entityQueue.size():maxEntitySpawn;
-                    for(int i=0;i<maxEntitySpawnValue;i++){
-                        AsEntityData next=queue.entityQueue.poll();
-                        if(next==null)break;
+                    if(blocksFinished.isEmpty())continue;
 
-                        next.data.spawn(next.pos.toLocation(world),next.preload);
+                    int maxEntitySpawnValue=maxEntitySpawn<=0?Integer.MAX_VALUE:maxEntitySpawn;
+                    int entitySpawned=0;
+
+                    Iterator<FrameQueues> entityFrameIterator=blocksFinished.iterator();
+                    currentFrame=entityFrameIterator.next();
+
+                    while(entitySpawned<maxEntitySpawnValue){
+                        AsEntityData next=currentFrame.entities.poll();
+                        if(next==null){
+                            queue.frames.remove(currentFrame.frame.id);
+                            currentFrame.frame.afterFrame.run();
+
+                            if(!entityFrameIterator.hasNext())break;
+                            currentFrame=entityFrameIterator.next();
+
+                            continue;
+                        }
+
+                        next.data.spawn(next.pos.toLocation(world),next.sleepPos,next.blockLeash,next.preload);
+                        entitySpawned++;
                     }
                 }
             }
         }
+
         for(Vec2 chunk:ended){
             if(!awaits.contains(chunk)){
                 Chunk ch=active.remove(chunk);

@@ -5,7 +5,7 @@ import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.exceptions.WrapperCommandSyntaxException;
 import io.hotwop.dungeonbl.DBlCommand;
 import io.hotwop.dungeonbl.mark.codec.MarkDataSerializer;
-import io.hotwop.dungeonbl.mark.codec.SerializeException;
+import io.hotwop.dungeonbl.mark.codec.MarkSerializeException;
 import io.hotwop.dungeonbl.util.math.SideRotation;
 import org.bukkit.command.CommandSender;
 
@@ -21,12 +21,12 @@ public final class RotationSerializer implements MarkDataSerializer<SideRotation
     }
 
     @Override
-    public SideRotation fromNBT(Integer data) throws SerializeException {
+    public SideRotation fromNBT(Integer data) throws MarkSerializeException {
         return SideRotation.get(data);
     }
 
     @Override
-    public Integer toNBT(SideRotation obj) throws SerializeException {
+    public Integer toNBT(SideRotation obj) throws MarkSerializeException {
         return obj.ordinal();
     }
 

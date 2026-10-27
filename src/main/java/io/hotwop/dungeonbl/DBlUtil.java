@@ -84,8 +84,8 @@ public final class DBlUtil {
         drawParticleLine(particle,world,players,arrowEnd,arrowRight,space);
     }
 
-    public static void drawCircle(Particle.DustOptions particle,World world,List<Player> players,Vector center,int radius){
-        for(int degrees=0;degrees<=360;degrees+=10/radius){
+    public static void drawCircle(Particle.DustOptions particle,World world,List<Player> players,Vector center,double radius){
+        for(double degrees=0;degrees<=360;degrees+=10/radius){
             Vector pos=center.clone().add(new Vector(0,0,radius).rotateAroundY(Math.toRadians(degrees)));
             world.spawnParticle(Particle.DUST,players,null,pos.getX(),pos.getY(),pos.getZ(),1,0,0,0,0,particle,false);
         }

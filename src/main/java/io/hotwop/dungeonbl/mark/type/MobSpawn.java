@@ -1,11 +1,9 @@
 package io.hotwop.dungeonbl.mark.type;
 
-import dev.jorel.commandapi.arguments.IntegerArgument;
 import io.hotwop.dungeonbl.DungeonBl;
 import io.hotwop.dungeonbl.mark.RotatableMark;
 import io.hotwop.dungeonbl.mark.dungeon.*;
 import io.hotwop.dungeonbl.mark.RoomTypePredicate;
-import io.hotwop.dungeonbl.mark.codec.ArgumentContext;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.codec.MarkData;
@@ -40,10 +38,7 @@ public final class MobSpawn extends DungeonMark<MobSpawn, MobSpawnData> implemen
             MobSpawn::placing,
             MobSpawnData::new,
             MobSpawnData.class
-        ),
-        ArgumentContext.builder()
-            .define("positive",int.class,int.class,(num,ctx)->num,name->new IntegerArgument(name,0))
-            .build()
+        )
     );
 
     public MarkCodec<MobSpawn> markType() {
@@ -53,7 +48,7 @@ public final class MobSpawn extends DungeonMark<MobSpawn, MobSpawnData> implemen
     private static final Random mobSelector=new Random();
 
     private @MarkData(saveOnly=true) SideRotation rotation;
-    private final @MarkData(argument="positive",lore="§7Pool: §e%s",optional=true) int pool;
+    private final @MarkData(argument="PositiveInt",lore="§7Pool: §e%s",optional=true) int pool;
 
     private final ArrowDrawer arrowDrawer;
 

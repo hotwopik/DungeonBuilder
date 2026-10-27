@@ -1,13 +1,13 @@
 package io.hotwop.dungeonbl.mark.codec;
 
-public class SerializeException extends Exception{
-    public SerializeException(){
+public class MarkSerializeException extends Exception{
+    public MarkSerializeException(){
         super("Error to serialize MarkInfo");
     }
-    public SerializeException(String message){
+    public MarkSerializeException(String message){
         super("Error to serialize MarkInfo: "+message);
     }
-    public SerializeException(String message,Throwable cause){
+    public MarkSerializeException(String message, Throwable cause){
         super("Error to serialize MarkInfo: "+message,cause);
     }
 }

@@ -162,30 +162,6 @@ public final class DBlCommand{
             sender.sendMessage("Reloading...");
         });
 
-    public static final CommandAPICommand saveCommand = new CommandAPICommand("save")
-        .withPermission("dungeonbl.command.save")
-        .withOptionalArguments(
-            new MultiLiteralArgument("mode","dungeons","mobs","buildings")
-        )
-        .executesNative((sender,args)->{
-            String mode=args.getByClass("mode",String.class);
-            DBlRegistries registries=DungeonBl.registries();
-
-            DungeonBl.executorService.execute(()->{
-                switch(mode){
-                    case "dungeons"->registries.dungeons.save();
-                    case "mobs"->registries.mobs.save();
-                    case "buildings"->{
-                        registries.roomBuildings.save();
-                        registries.decorations.save();
-                        registries.doorways.save();
-                    }
-                    case null, default->registries.saveAll();
-                }
-            });
-            sender.sendMessage("Saving...");
-        });
-
     public static final CommandAPICommand buildingCommand=new CommandAPICommand("building")
         .withPermission("dungeonbl.command.build")
         .withSubcommands(
@@ -204,7 +180,6 @@ public final class DBlCommand{
             buildingCommand,
             MobCommand.root,
             reloadCommand,
-            saveCommand,
             MarkType.collectCommand()
         );
 
@@ -330,6 +305,7 @@ public final class DBlCommand{
                 if(!DBlRegistry.validId.test(name))throw CommandAPI.failWithString("Invalid id: "+name);
 
                 RoomBuilding roomBuilding=RoomBuilding.scan(from.getWorld(),new Vec3(from),new Vec3(to));
+
                 DungeonBl.registries().roomBuildings
                     .add(name,roomBuilding);
 
@@ -348,12 +324,15 @@ public final class DBlCommand{
             .executesNative((sender,args)->{
                 String name=args.getByClass("name",String.class);
 
-                DungeonBl.registries().roomBuildings.remove(name);
+                DungeonBl.registries().roomBuildings
+                    .remove(name);
+
                 sender.sendMessage("Room removed");
             });
 
         public static final CommandAPICommand place=new CommandAPICommand("place")
             .withArguments(
+                new LocationArgument("pos",LocationType.BLOCK_POSITION),
                 stringListArgument(
                     "name",
                     "Room Building",
@@ -365,14 +344,14 @@ public final class DBlCommand{
             .executesNative(((sender, args) -> {
                 String name=args.getByClass("name",String.class);
                 SideRotation rotation=args.getByClass("rotation",SideRotation.class);
-                Location location=sender.getLocation();
+                Location location=args.getByClass("pos",Location.class);
 
                 DungeonBl.registries().roomBuildings.get(name)
-                    .place(new Vec3(location),rotation,new OneTimeBuilder(location.getWorld()));
+                    .placeWithMarks(location,rotation,new OneTimeBuilder(location.getWorld()));
             }));
 
         public static final CommandAPICommand root=new CommandAPICommand("room")
-            .withSubcommands(save,remove);
+            .withSubcommands(save,remove,place);
 
         private RoomCommand(){}
     }
@@ -416,12 +395,15 @@ public final class DBlCommand{
             .executesNative((sender,args)->{
                 String name=args.getByClass("name",String.class);
 
-                DungeonBl.registries().doorways.remove(name);
+                DungeonBl.registries().doorways
+                    .remove(name);
+
                 sender.sendMessage("Doorway removed");
             });
 
         public static final CommandAPICommand place=new CommandAPICommand("place")
             .withArguments(
+                new LocationArgument("pos",LocationType.BLOCK_POSITION),
                 stringListArgument(
                     "name",
                     "Doorway",
@@ -433,14 +415,14 @@ public final class DBlCommand{
             .executesNative(((sender, args) -> {
                 String name=args.getByClass("name",String.class);
                 SideRotation rotation=args.getByClass("rotation",SideRotation.class);
-                Location location=sender.getLocation();
+                Location location=args.getByClass("pos",Location.class);
 
                 DungeonBl.registries().doorways.get(name)
                     .place(new Vec3(location),rotation,new OneTimeBuilder(location.getWorld()));
             }));
 
         public static final CommandAPICommand root=new CommandAPICommand("doorway")
-            .withSubcommands(save,remove);
+            .withSubcommands(save,remove,place);
 
         private DoorwayCommand(){}
     }
@@ -460,6 +442,7 @@ public final class DBlCommand{
                 if(!DBlRegistry.validId.test(name))throw CommandAPI.failWithString("Invalid id: "+name);
 
                 Decoration decoration=Decoration.scan(from.getWorld(),new Vec3(from),new Vec3(to));
+
                 DungeonBl.registries().decorations
                     .add(name,decoration);
 
@@ -478,12 +461,34 @@ public final class DBlCommand{
             .executesNative((sender,args)->{
                 String name=args.getByClass("name",String.class);
 
-                DungeonBl.registries().decorations.remove(name);
+                DungeonBl.registries().decorations
+                    .remove(name);
+
                 sender.sendMessage("Decoration removed");
             });
 
+        public static final CommandAPICommand place=new CommandAPICommand("place")
+            .withArguments(
+                new LocationArgument("pos",LocationType.BLOCK_POSITION),
+                stringListArgument(
+                    "name",
+                    "Decoration",
+                    ()->DungeonBl.registries().decorations.idSet(),
+                    name->DungeonBl.registries().decorations.get(name)!=null
+                ),
+                rotationArgument("rotation")
+            )
+            .executesNative(((sender, args) -> {
+                String name=args.getByClass("name",String.class);
+                SideRotation rotation=args.getByClass("rotation",SideRotation.class);
+                Location location=args.getByClass("pos",Location.class);
+
+                DungeonBl.registries().decorations.get(name)
+                    .place(new Vec3(location),rotation,new OneTimeBuilder(location.getWorld()));
+            }));
+
         public static final CommandAPICommand root=new CommandAPICommand("decoration")
-            .withSubcommands(save,remove);
+            .withSubcommands(save,remove,place);
 
         private DecorationCommand(){}
     }
@@ -530,7 +535,9 @@ public final class DBlCommand{
             .executesNative((sender,args)->{
                 String name=args.getByClass("name",String.class);
 
-                DungeonBl.registries().mobs.remove(name);
+                DungeonBl.registries().mobs
+                    .remove(name);
+
                 sender.sendMessage("Mob removed");
             });
 

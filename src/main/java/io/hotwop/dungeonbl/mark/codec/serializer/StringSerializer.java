@@ -7,11 +7,11 @@ import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.StringArgument;
 import dev.jorel.commandapi.exceptions.WrapperCommandSyntaxException;
 import io.hotwop.dungeonbl.mark.codec.MarkDataSerializer;
-import io.hotwop.dungeonbl.mark.codec.SerializeException;
+import io.hotwop.dungeonbl.mark.codec.MarkSerializeException;
 import org.bukkit.command.CommandSender;
 import org.jspecify.annotations.NonNull;
 
-public final class StringSerializer implements MarkDataSerializer<String,String,String>{
+public class StringSerializer implements MarkDataSerializer<String,String,String>{
     public static final StringSerializer instance=new StringSerializer();
     public static final NBTHandler<String> stringHandler=new NBTHandler<>(){
         @Override
@@ -29,7 +29,7 @@ public final class StringSerializer implements MarkDataSerializer<String,String,
             return nbt.getString(key);
         }
     };
-    private StringSerializer(){}
+    protected StringSerializer(){}
 
     @Override
     public NBTHandler<String> getHandler() {
@@ -37,12 +37,12 @@ public final class StringSerializer implements MarkDataSerializer<String,String,
     }
 
     @Override
-    public String fromNBT(String data) throws SerializeException {
+    public String fromNBT(String data) throws MarkSerializeException {
         return data;
     }
 
     @Override
-    public String toNBT(String obj) throws SerializeException {
+    public String toNBT(String obj) throws MarkSerializeException {
         return obj;
     }
 

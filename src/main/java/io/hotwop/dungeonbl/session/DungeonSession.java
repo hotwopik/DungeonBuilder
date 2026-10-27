@@ -125,7 +125,7 @@ public final class DungeonSession{
             try{
                 world=DungeonBl.versioned()
                     .createTemporalWorld(dungeonsFolder,folderName,DungeonBl.namespace+"_"+worldName,new NamespacedKey(DungeonBl.namespace,worldName));
-            } catch (WorldException e) {
+            } catch (WorldException|RuntimeException e) {
                 logger.error("Error to create dungeon {} world",dungeon,e);
                 playerList.forEach(player->{
                     playerDataStorage.endTransfer(player);

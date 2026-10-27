@@ -1,10 +1,7 @@
 package io.hotwop.dungeonbl.mark.type;
 
-import io.hotwop.dungeonbl.DBlCommand;
 import io.hotwop.dungeonbl.DBlUtil;
-import io.hotwop.dungeonbl.DungeonBl;
 import io.hotwop.dungeonbl.mark.Mark;
-import io.hotwop.dungeonbl.mark.codec.ArgumentContext;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.codec.MarkData;
@@ -23,12 +20,7 @@ public final class DungeonChest extends Mark<DungeonChest>{
         "dungeon_chest",
         ItemType.CHEST,
         ChatColor.DARK_GRAY+"Dungeon Chest",
-        DungeonChest.class,
-        ArgumentContext.builder()
-            .define("dungeon",String.class,String.class,(str,ctx)->str,name->DBlCommand
-                .stringListArgument(name,"Dungeon",()->DungeonBl.registries().dungeons.idSet(),null)
-            )
-            .build()
+        DungeonChest.class
     );
 
     public MarkCodec<DungeonChest> markType() {
@@ -58,7 +50,7 @@ public final class DungeonChest extends Mark<DungeonChest>{
         xVector.clone().add(yVector)
     );
 
-    public final @MarkData(argument="dungeon",lore="§7Dungeon: §e%s") String dungeon;
+    public final @MarkData(argument="DungeonId",lore="§7Dungeon: §e%s") String dungeon;
 
     private final Vector origin;
 

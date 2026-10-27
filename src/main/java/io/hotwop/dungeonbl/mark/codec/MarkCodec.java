@@ -33,11 +33,20 @@ import static io.hotwop.dungeonbl.DungeonBl.logger;
 public final class MarkCodec<T extends Mark<T>> extends MarkType{
     public static final SerializerContext default_context=SerializerContext.builder()
         .register(int.class,int.class,int.class,IntSerializer.instance)
+        .register(double.class,double.class,double.class,DoubleSerializer.instance)
         .register(Location.class,Location.class,ReadableNBT.class,LocationSerializer.instance)
         .register(NamespacedKey.class,NamespacedKey.class,String.class,NamespacedKeySerializer.instance)
         .register(String.class,String.class,String.class,StringSerializer.instance)
         .register(SideRotation.class, SideRotation.class,int.class, RotationSerializer.instance)
         .register(PotionEffectType.class,PotionEffectType.class,String.class,PotionEffectTypeSerializer.instance)
+
+        .register("PositiveInt",int.class,int.class,int.class,PositiveIntSerializer.instance)
+        .register("PositiveDouble",double.class,double.class,double.class,PositiveDoubleSerializer.instance)
+        .register("DungeonId",String.class,String.class,String.class,DungeonIdSerializer.instance)
+        .register("DoorwayId",String.class,String.class,String.class,DoorwayIdSerializer.instance)
+        .register("Time",int.class,int.class,int.class,TimeSerializer.instance)
+        .register("IdString",String.class,String.class,String.class,IdStringSerializer.instance)
+
         .build();
 
     public static <T extends Mark<T>> MarkCodec<T> createCodec(
@@ -45,34 +54,17 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
         ItemType item,
         String displayName,
 
-        Class<T> markClazz
-    ){
-        return createCodec(
-            name,
-            item,
-            displayName,
-            markClazz,
-            default_context,
-            null
-        );
-    }
-    public static <T extends Mark<T>> MarkCodec<T> createCodec(
-        String name,
-        ItemType item,
-        String displayName,
-
-        Class<T> clazz,
-        ArgumentContext arguments
+        Class<T> clazz
     ){
         return createCodec(
             name,
             item,
             displayName,
             clazz,
-            default_context,
-            arguments
+            default_context
         );
     }
+
     public static <T extends Mark<T>> MarkCodec<T> createCodec(
         String name,
         ItemType item,
@@ -81,25 +73,7 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
         Class<T> clazz,
         SerializerContext context
     ){
-        return createCodec(
-            name,
-            item,
-            displayName,
-            clazz,
-            context,
-            null
-        );
-    }
-    public static <T extends Mark<T>> MarkCodec<T> createCodec(
-        String name,
-        ItemType item,
-        String displayName,
-
-        Class<T> clazz,
-        SerializerContext context,
-        ArgumentContext arguments
-    ){
-        return new MarkCodec<>(name,item,displayName,clazz,null,getClassInfo(clazz,context,arguments));
+        return new MarkCodec<>(name,item,displayName,clazz,null,getClassInfo(clazz,context));
     }
 
 
@@ -117,27 +91,7 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
             displayName,
             clazz,
             dungeon,
-            default_context,
-            null
-        );
-    }
-    public static <T extends DungeonMark<T,P>,P extends MarkPlaceData> MarkCodec<T> createCodec(
-        String name,
-        ItemType item,
-        String displayName,
-
-        Class<T> clazz,
-        DungeonMarkData<T,P> dungeon,
-        ArgumentContext arguments
-    ){
-        return createCodec(
-            name,
-            item,
-            displayName,
-            clazz,
-            dungeon,
-            default_context,
-            arguments
+            default_context
         );
     }
 
@@ -148,16 +102,14 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
 
         Class<T> clazz,
         DungeonMarkData<T,P> dungeon,
-        SerializerContext context,
-        ArgumentContext arguments
+        SerializerContext context
     ){
-        return new MarkCodec<>(name,item,displayName,clazz,dungeon,getClassInfo(clazz,context,arguments));
+        return new MarkCodec<>(name,item,displayName,clazz,dungeon,getClassInfo(clazz,context));
     }
 
     private record FieldInfo(
         SerializerContext.SerializerData<?,?,?> serializerData,
         MarkData dataPoint,
-        ArgumentContext.ArgumentData<?,?> argumentData,
         String name
     ){}
 
@@ -170,8 +122,7 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
     @SuppressWarnings("unchecked")
     private static <T extends Mark<T>> ClassInfo<T> getClassInfo(
         Class<T> clazz,
-        SerializerContext context,
-        ArgumentContext arguments
+        SerializerContext context
     ){
         Set<Field> fieldList=new HashSet<>();
         findFields(clazz,fieldList);
@@ -181,21 +132,37 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
 
         for(Field field:fieldList){
             field.setAccessible(true);
-            SerializerContext.SerializerData<?,?,?> ser=context.getSerializerData(field.getType());
-            if(ser==null)throw
-                new RuntimeException("Error to initialize MarkCodec, MarkData error: "+field.getType().getCanonicalName()+" has no serializer");
 
             MarkData dat=field.getAnnotationsByType(MarkData.class)[0];
-            ArgumentContext.ArgumentData<?,?> argument;
-            if(!dat.argument().isEmpty()){
-                argument=arguments.get(dat.argument());
-                if(argument==null)throw new RuntimeException("Error to initialize MarkCodec, MarkData error: unknown context argument: "+dat.argument());
-                if(!argument.type().isAssignableFrom(field.getType()))throw new RuntimeException("Error to initialize MarkCodec, MarkData error: context argument type("+argument.type().getCanonicalName()+") not super of field type("+field.getType().getCanonicalName()+")");
-            }else argument=null;
+            Class<?> fieldType=field.getType();
+
+            SerializerContext.SerializerData<?,?,?> ser;
+
+            if(dat.argument().isEmpty()){
+                ser=context.getSerializerData(fieldType);
+
+                if(ser==null)throw
+                    new RuntimeException("Error to initialize MarkCodec, MarkData error: "+fieldType.getCanonicalName()+" has no serializer");
+            }else{
+                ser=context.getSerializerById(dat.argument());
+
+                if(ser==null)throw
+                    new RuntimeException("Error to initialize MarkCodec, MarkData error: unknown context argument: "+dat.argument());
+
+                Class<?> serType=ser.serializable();
+
+                if(!serType.isAssignableFrom(fieldType))throw
+                    new RuntimeException(
+                        "Error to initialize MarkCodec, MarkData error: context argument type("+
+                        serType.getCanonicalName()+
+                        ") not super of field type("+
+                        fieldType.getCanonicalName()+")"
+                    );
+            }
 
             fields.add(field);
             String nam=field.getName();
-            info.put(nam,new FieldInfo(ser,dat,argument, DBlUtil.toLowerString(nam)));
+            info.put(nam,new FieldInfo(ser,dat,DBlUtil.toLowerString(nam)));
         }
 
         Map<Constructor<T>,List<String>> constructors=new HashMap<>();
@@ -217,7 +184,11 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
                 FieldInfo dat=info.get(inf);
                 if(dat==null)throw new RuntimeException("Error to initialize MarkCodec, MarkCreator error: unknown info "+inf);
                 if(!dat.serializerData.serializable().isAssignableFrom(params[i+1]))throw
-                    new RuntimeException("Error to initialize MarkCodec, MarkCreator error: serializer class "+dat.serializerData.serializable().getCanonicalName()+" not equals parameter class "+params[i+1].getCanonicalName());
+                    new RuntimeException(
+                        "Error to initialize MarkCodec, MarkCreator error: serializer class "+
+                        dat.serializerData.serializable().getCanonicalName()+
+                        " not equals parameter class "+params[i+1].getCanonicalName()
+                    );
                 infList.add(inf);
             }
             constructors.put(ct,List.copyOf(infList));
@@ -283,7 +254,7 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
             if(data.hasTag(dat.name)){
                 try{
                     values.add(dat.serializerData.get(data,dat.name));
-                }catch(SerializeException e){
+                }catch(MarkSerializeException e){
                     logger.warn(
                         "Error to deserialize mark {} field {}, serializer {} : {}",
                         clazz.getName(),
@@ -362,7 +333,7 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
                 }
                 dat.serializerData.put(out,dat.name,obj);
             }catch(IllegalAccessException ignore){}
-            catch(SerializeException e){
+            catch(MarkSerializeException e){
                 logger.error(
                     "Error to serialize mark {} field {}, serializer {} : {}",
                     clazz.getName(),
@@ -387,10 +358,8 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
             .forEach((data)->{
                 if(data.dataPoint.saveOnly())return;
 
-                ArgumentContext.ArgumentData<?,?> argType=data.argumentData;
-                Argument<?> argument=argType==null?
-                    data.serializerData.serializer().getArgument(data.name):
-                    argType.argument(data.name);
+                Argument<?> argument=data.serializerData.serializer()
+                    .getArgument(data.name);
 
                 if(data.dataPoint.optional())opts.add(argument);
                 else required.add(argument);
@@ -413,11 +382,9 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
             if(dat.dataPoint.saveOnly())continue;
 
             try{
-                String obj;
-                if(dat.argumentData==null)obj=dat.serializerData.processArgument(dat.name,out,ctx,args);
-                else obj=dat.argumentData.process(dat.name,ctx,dat.serializerData,out,args);
-
+                String obj=dat.serializerData.processArgument(dat.name,out,ctx,args);
                 String lor=dat.dataPoint.lore();
+
                 if(!lor.isEmpty())lore.add(lor.replace("%s",obj));
             }catch(IllegalArgumentException e){
                 if(!dat.dataPoint.optional())throw CommandAPI.failWithString("Argument isn't present as expected: "+dat.name);
@@ -430,9 +397,9 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
 
                         String lor=dat.dataPoint.lore();
                         if(!lor.isEmpty())lore.add(lor.replace("%s",obj));
-                    }catch(SerializeException ignore){}
+                    }catch(MarkSerializeException ignore){}
                 }
-            }catch(SerializeException e){
+            }catch(MarkSerializeException e){
                 throw CommandAPI.failWithString("Argument "+dat.name+" specified incorrectly: "+e.getMessage());
             }
         }
@@ -466,7 +433,7 @@ public final class MarkCodec<T extends Mark<T>> extends MarkType{
 
             try{
                 return ser.get(data,name);
-            }catch(SerializeException e){
+            }catch(MarkSerializeException e){
                 throw new RuntimeException(name+" deserialized incorrectly");
             }
         }

@@ -99,6 +99,16 @@ public record Vec3d(
         return new Vec3d(x*scalar,y*scalar,z*scalar);
     }
 
+    public Vec3d rotateAndTranslate(Vec3 origin,SideRotation rotation,Vec3 position){
+        double x=this.x-origin.x();
+        double z=this.z-origin.z();
+        return new Vec3d(
+            x*rotation.cos+z*rotation.sin+position.x(),
+            this.y-origin.y()+position.y(),
+            z*rotation.cos-x*rotation.sin+position.z()
+        );
+    }
+
     public static Vec3d center(Vec3 first,Vec3 second){
         return new Vec3d(
             (first.x()+second.x())/2.,

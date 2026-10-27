@@ -5,15 +5,13 @@ import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.NamespacedKeyArgument;
 import dev.jorel.commandapi.exceptions.WrapperCommandSyntaxException;
 import io.hotwop.dungeonbl.mark.codec.MarkDataSerializer;
-import io.hotwop.dungeonbl.mark.codec.SerializeException;
+import io.hotwop.dungeonbl.mark.codec.MarkSerializeException;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 
-public final class NamespacedKeySerializer implements MarkDataSerializer<NamespacedKey,NamespacedKey,String>{
+public class NamespacedKeySerializer implements MarkDataSerializer<NamespacedKey,NamespacedKey,String>{
     public static final NamespacedKeySerializer instance=new NamespacedKeySerializer();
-
     private NamespacedKeySerializer(){}
-
 
     @Override
     public NBTHandler<String> getHandler() {
@@ -21,14 +19,14 @@ public final class NamespacedKeySerializer implements MarkDataSerializer<Namespa
     }
 
     @Override
-    public NamespacedKey fromNBT(String data) throws SerializeException {
+    public NamespacedKey fromNBT(String data) throws MarkSerializeException {
         NamespacedKey key=NamespacedKey.fromString(data);
-        if(key==null)throw new SerializeException("Namespaced key is invalid: "+data);
+        if(key==null)throw new MarkSerializeException("Namespaced key is invalid: "+data);
         return key;
     }
 
     @Override
-    public String toNBT(NamespacedKey obj) throws SerializeException {
+    public String toNBT(NamespacedKey obj) throws MarkSerializeException {
         return obj.asMinimalString();
     }
 
@@ -39,7 +37,7 @@ public final class NamespacedKeySerializer implements MarkDataSerializer<Namespa
 
     @Override
     public NamespacedKey processArgument(NamespacedKey obj, CommandSender ctx) throws WrapperCommandSyntaxException {
-        return null;
+        return obj;
     }
 
     @Override

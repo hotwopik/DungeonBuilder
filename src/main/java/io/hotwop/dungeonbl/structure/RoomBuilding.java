@@ -18,6 +18,7 @@ import io.hotwop.dungeonbl.structure.builder.WorldBuilder;
 import io.hotwop.dungeonbl.structure.container.StructureContainer;
 import io.hotwop.dungeonbl.util.math.SideRotation;
 import io.hotwop.dungeonbl.util.math.Vec3;
+import org.bukkit.Location;
 import org.bukkit.World;
 
 import java.util.HashMap;
@@ -45,7 +46,7 @@ public final class RoomBuilding {
             Vec3 pos = entry.getKey();
             if (
                 pos.x() < 0 || pos.y() < 0 || pos.z() < 0 ||
-                    pos.x() >= size.x() || pos.y() >= size.y() || pos.z() >= size.z()
+                pos.x() >= size.x() || pos.y() >= size.y() || pos.z() >= size.z()
             ) throw new IllegalArgumentException("Mark is out of bounds");
             if (entry.getValue().codec.dungeon == null) throw new IllegalArgumentException("Mark type is invalid");
         }
@@ -70,7 +71,23 @@ public final class RoomBuilding {
     }
 
     public void place(Vec3 pos, SideRotation rotation, WorldBuilder builder) {
-        container.place(pos, new Vec3(0,0,0), rotation, builder);
+        container.place(pos, new Vec3(0,0,0), rotation, builder, false);
+    }
+
+    public void placeWithMarks(Location location, SideRotation rotation, WorldBuilder builder){
+        World world=location.getWorld();
+        Vec3 pos=new Vec3(location);
+        Vec3 origin=new Vec3(0,0,0);
+
+        container.place(pos, origin, rotation, builder, true);
+
+        for(Map.Entry<Vec3,MarkSavedData> entry:marks.entrySet()){
+            entry.getValue().codec.fromCompound(
+                entry.getKey().rotateAndTranslate(origin,rotation,pos).toLocation(world),
+                entry.getValue().nbt,
+                true
+            );
+        }
     }
 
     public static RoomBuilding scan(World world, Vec3 begin, Vec3 end) {
@@ -125,7 +142,7 @@ public final class RoomBuilding {
             int index = 0;
             for (ReadWriteNBT markEntry : markList) {
                 int[] posArr = markEntry.getIntArray("pos");
-                if (posArr == null) throw new StructureSerializeException("Mark " + index + " \"pos\" is missing");
+                if (posArr == null||posArr.length==0) throw new StructureSerializeException("Mark " + index + " \"pos\" is missing");
 
                 Vec3 pos = DBlUtil.arrayToVec3(posArr);
                 if (pos == null) throw new StructureSerializeException("Mark " + index + " \"pos\" is invalid");

@@ -113,7 +113,7 @@ public final class StructRegistry<T> extends DBlRegistry<T>{
     @Override
     public void load(){
         busyLock();
-        logger.info("Loading {}...", name);
+        logger.info("Loading {}", name);
 
         Set<String> removeCounter=new HashSet<>(map.keySet());
         map.clear();
@@ -147,11 +147,45 @@ public final class StructRegistry<T> extends DBlRegistry<T>{
         busyUnlock();
     }
 
+    @Override
+    public void save(String id) {
+        busyLock();
+        logger.info("Saving {} {}", name, id);
+
+        path.toFile().mkdirs();
+
+        if(map.containsKey(id)){
+            try{
+                write(id);
+            } catch (StructureSerializeException e) {
+                logger.warn("Error to serialize {} {}", name, id, e);
+            } catch (IOException e) {
+                logger.warn("Error to write {} {} file", name, id, e);
+            }catch (RuntimeException e) {
+                logger.warn("Unexpected error arrived while serializing {} {}", name, id, e);
+            }
+        }else if(removed.contains(id)){
+            try{
+                delete(id);
+                removed.remove(id);
+            }catch(IOException e){
+                logger.warn("Error to delete {} {} file (may be loaded on reload)", name, id, e);
+            }catch (RuntimeException e) {
+                logger.warn("Unexpected error arrived while deleting {} {} file (may be loaded on reload)", name, id, e);
+            }
+        }else{
+            logger.error("Trying to save unknown element {}", id);
+        }
+
+        busyUnlock();
+    }
+
     private void write(String id) throws IOException, StructureSerializeException {
         Path file = path.resolve(id.replace(File.separator, "/")+".str");
         T value = map.get(id);
         ReadWriteNBT data = encoder.toNBT(value);
         NBT.writeFile(file.toFile(),data);
+        logger.info("File write {}",file);
     }
 
     private void delete(String id) throws IOException {

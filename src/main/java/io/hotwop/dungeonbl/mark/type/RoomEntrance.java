@@ -1,13 +1,11 @@
 package io.hotwop.dungeonbl.mark.type;
 
-import io.hotwop.dungeonbl.DBlCommand;
 import io.hotwop.dungeonbl.DungeonBl;
 import io.hotwop.dungeonbl.mark.RotatableMark;
 import io.hotwop.dungeonbl.mark.place.DoorwayData;
 import io.hotwop.dungeonbl.mark.dungeon.DungeonMark;
 import io.hotwop.dungeonbl.mark.dungeon.DungeonMarkData;
 import io.hotwop.dungeonbl.mark.RoomTypePredicate;
-import io.hotwop.dungeonbl.mark.codec.ArgumentContext;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.codec.MarkData;
@@ -37,12 +35,7 @@ public final class RoomEntrance extends DungeonMark<RoomEntrance, DoorwayData> i
             RoomEntrance::placing,
             DoorwayData::new,
             DoorwayData.class
-        ),
-        ArgumentContext.builder()
-            .define("doorway",String.class,String.class,(nam,ctx)->nam,name->DBlCommand
-                .stringListArgument(name,"Doorway",()-> DungeonBl.registries().doorways.idSet(),null)
-            )
-            .build()
+        )
     );
 
     public MarkCodec<RoomEntrance> markType() {
@@ -50,7 +43,7 @@ public final class RoomEntrance extends DungeonMark<RoomEntrance, DoorwayData> i
     }
 
     private @MarkData(saveOnly=true) SideRotation rotation;
-    public final @MarkData(argument="doorway",lore="§7Doorway: §e%s") String doorway;
+    public final @MarkData(argument="DoorwayId",lore="§7Doorway: §e%s") String doorway;
 
     public final Doorway.Display display;
 

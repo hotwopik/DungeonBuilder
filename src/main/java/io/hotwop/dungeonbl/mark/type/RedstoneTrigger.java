@@ -1,8 +1,6 @@
 package io.hotwop.dungeonbl.mark.type;
 
-import io.hotwop.dungeonbl.DBlCommand;
 import io.hotwop.dungeonbl.io.DBlRegistry;
-import io.hotwop.dungeonbl.mark.codec.ArgumentContext;
 import io.hotwop.dungeonbl.mark.codec.MarkData;
 import io.hotwop.dungeonbl.mark.dungeon.DungeonMark;
 import io.hotwop.dungeonbl.mark.dungeon.DungeonMarkData;
@@ -36,17 +34,14 @@ public final class RedstoneTrigger extends DungeonMark<RedstoneTrigger, TriggerD
             RedstoneTrigger::placing,
             TriggerData::new,
             TriggerData.class
-        ),
-        ArgumentContext.builder()
-            .define("valid_id",String.class,String.class,(val,ctx)->val,DBlCommand::validIdArgument)
-            .build()
+        )
     );
 
     public MarkCodec<RedstoneTrigger> markType() {
         return type;
     }
 
-    public final @MarkData(argument="valid_id",lore="§7Signal: §e%s") String signal;
+    public final @MarkData(argument="IdString",lore="§7Signal: §e%s") String signal;
     public final @MarkData(optional=true,lore="§7Value: §e%s") int value;
 
     @MarkCreator({"signal","value"})

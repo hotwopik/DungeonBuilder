@@ -8,8 +8,8 @@ import org.bukkit.command.CommandSender;
 public interface MarkDataSerializer<T,V,N>{
     NBTHandler<N> getHandler();
 
-    T fromNBT(N data) throws SerializeException;
-    N toNBT(T obj) throws SerializeException;
+    T fromNBT(N data) throws MarkSerializeException;
+    N toNBT(T obj) throws MarkSerializeException;
 
     Argument<V> getArgument(String name);
     T processArgument(V obj,CommandSender ctx) throws WrapperCommandSyntaxException;
@@ -20,4 +20,6 @@ public interface MarkDataSerializer<T,V,N>{
     default String stringify(T obj){
         return obj.toString();
     }
+
+    default void validate(T obj) throws MarkSerializeException {}
 }

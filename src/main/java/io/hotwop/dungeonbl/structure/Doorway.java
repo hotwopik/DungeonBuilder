@@ -78,7 +78,7 @@ public record Doorway(StructureContainer container, Vec3 origin, SideRotation ro
 
     public void place(Vec3 position, SideRotation rotation, WorldBuilder builder){
         SideRotation outRotation=rotation.sub(this.rotation);
-        container.place(position, origin, outRotation, builder);
+        container.place(position, origin, outRotation, builder, true);
     }
 
     public ReadWriteNBT encode() throws StructureSerializeException{
@@ -97,7 +97,7 @@ public record Doorway(StructureContainer container, Vec3 origin, SideRotation ro
         Vec3 size=container.size();
 
         int[] originArr=nbt.getIntArray("origin");
-        if(originArr==null)throw new StructureSerializeException("\"origin\" is missing");
+        if(originArr==null||originArr.length==0)throw new StructureSerializeException("\"origin\" is missing");
 
         Vec3 origin=DBlUtil.arrayToVec3(originArr);
         if(origin==null)throw new StructureSerializeException("\"origin\" is invalid");
@@ -106,7 +106,6 @@ public record Doorway(StructureContainer container, Vec3 origin, SideRotation ro
             throw new StructureSerializeException("\"origin\" is out of bounds");
 
         Integer rotationVal=nbt.getInteger("rotation");
-        if(rotationVal==null)throw new StructureSerializeException("\"rotation\" is missing");
 
         SideRotation rotation= SideRotation.get(rotationVal);
         if(isInvalidRotation(rotation, size.x() > 1, size.z() > 1))throw

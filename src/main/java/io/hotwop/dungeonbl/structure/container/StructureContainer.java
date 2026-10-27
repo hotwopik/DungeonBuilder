@@ -1,9 +1,7 @@
 package io.hotwop.dungeonbl.structure.container;
 
-import de.tr7zw.changeme.nbtapi.NBT;
-import de.tr7zw.changeme.nbtapi.NBTType;
-import de.tr7zw.changeme.nbtapi.handler.NBTHandlers;
 import de.tr7zw.changeme.nbtapi.iface.*;
+
 import io.hotwop.dungeonbl.DungeonBl;
 import io.hotwop.dungeonbl.DBlUtil;
 import io.hotwop.dungeonbl.structure.StructureSerializeException;
@@ -12,9 +10,12 @@ import io.hotwop.dungeonbl.structure.codec.BlockMapDecoder;
 import io.hotwop.dungeonbl.structure.codec.BlockMapEncoder;
 import io.hotwop.dungeonbl.util.math.*;
 import io.hotwop.dungeonbl.util.math.SideRotation;
+
+import io.papermc.paper.entity.Leashable;
+import it.unimi.dsi.fastutil.ints.*;
+
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.block.data.Rotatable;
 import org.bukkit.block.data.type.Wall;
@@ -24,7 +25,14 @@ import org.bukkit.material.Directional;
 
 import java.util.*;
 
-public record StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<EntitySpawnData> entities) {
+public record StructureContainer(
+    Vec3 size,
+    Map<Vec3, BlockDat> blocks,
+
+    List<EntitySpawnData> entities,
+    Int2IntMap entityLeashMap,
+    Int2IntMap entityRideMap
+){
     public static final Set<EntityType> unallowedEntityTypes=Set.of(
         EntityType.PLAYER,EntityType.UNKNOWN,
 
@@ -40,12 +48,17 @@ public record StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<Ent
         EntityType.OMINOUS_ITEM_SPAWNER
     );
 
-    public static final double entityMaxOutOfBounds=5;
-
-    public StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<EntitySpawnData> entities) {
+    public StructureContainer(
+        Vec3 size,
+        Map<Vec3, BlockDat> blocks,
+        List<EntitySpawnData> entities,
+        Int2IntMap entityLeashMap,Int2IntMap entityRideMap
+    ) {
         this.size = size;
         this.blocks = Map.copyOf(blocks);
         this.entities = List.copyOf(entities);
+        this.entityLeashMap = Int2IntMaps.unmodifiable(entityLeashMap);
+        this.entityRideMap = Int2IntMaps.unmodifiable(entityRideMap);
 
         if (sizeIsInvalid(size)) throw new IllegalArgumentException("Size is invalid");
 
@@ -58,12 +71,20 @@ public record StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<Ent
 
         entities.forEach((entity) -> {
             if(unallowedEntityTypes.contains(entity.data().type()))throw new IllegalArgumentException("Unallowed entities");
-
-            Vec3d pos = entity.pos();
-            if (pos.x() < -entityMaxOutOfBounds || pos.y() < -entityMaxOutOfBounds || pos.z() < -entityMaxOutOfBounds ||
-                pos.x() > size.x()+entityMaxOutOfBounds || pos.y() > size.y()+entityMaxOutOfBounds || pos.z() > size.z()+entityMaxOutOfBounds
-            ) throw new IllegalArgumentException("Entity out of bounds");
+            entity.pos().validate(size);
         });
+
+        int entityCount=entities.size();
+
+        if(
+            entityLeashMap.keySet().intStream().anyMatch(v->v<0||v>=entityCount)||
+            entityLeashMap.values().intStream().anyMatch(v->v<0||v>=entityCount)
+        )throw new IllegalArgumentException("Entity leash data is invalid");
+
+        if(
+            entityRideMap.keySet().intStream().anyMatch(v->v<0||v>=entityCount)||
+            entityRideMap.values().intStream().anyMatch(v->v<0||v>=entityCount)
+        )throw new IllegalArgumentException("Entity ride data is invalid");
     }
 
     public static boolean sizeIsInvalid(Vec3 size) {
@@ -72,71 +93,65 @@ public record StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<Ent
         return space >= Integer.MAX_VALUE;
     }
 
-    public void place(Vec3 position, Vec3 origin, SideRotation rotation, WorldBuilder builder) {
-        blocks.forEach((pos, data)->{
-            BlockDat outData=switch(data.data()){
-                case org.bukkit.block.data.Directional dir->{
-                    dir=(org.bukkit.block.data.Directional)dir.clone();
-                    dir.setFacing(rotation.addTo(dir.getFacing()));
-                    yield data.replaceData(dir);
+    public void place(Vec3 position, Vec3 origin, SideRotation rotation, WorldBuilder builder, boolean pasteAir) {
+        ArrayList<Entity> spawned=new ArrayList<>(entities.size());
+        spawned.addAll(Collections.nCopies(entities.size(),null));
+
+        Box3 roomBox=Box3.withSize(new Vec3(0,0,0),size);
+
+        builder.beginFrame(()->{
+            for(Int2IntMap.Entry entry:entityLeashMap.int2IntEntrySet()){
+                Entity from=spawned.get(entry.getIntKey());
+                Entity to=spawned.get(entry.getIntValue());
+
+                if(from instanceof Leashable leashable){
+                    leashable.setLeashHolder(to);
                 }
-                case MultipleFacing multiFacing->{
-                    multiFacing=(MultipleFacing)multiFacing.clone();
-                    Set<BlockFace> faces=Set.copyOf(multiFacing.getFaces());
+            }
 
-                    for(BlockFace face:faces){
-                        multiFacing.setFace(face,false);
-                    }
+            for(Int2IntMap.Entry entry:entityRideMap.int2IntEntrySet()){
+                Entity from=spawned.get(entry.getIntKey());
+                Entity to=spawned.get(entry.getIntValue());
 
-                    for(BlockFace face:faces){
-                        multiFacing.setFace(rotation.addTo(face),true);
-                    }
-
-                    yield data.replaceData(multiFacing);
-                }
-                case Rotatable rotatable->{
-                    rotatable=(Rotatable)rotatable.clone();
-                    rotatable.setRotation(rotation.addTo(rotatable.getRotation()));
-                    yield data.replaceData(rotatable);
-                }
-                case Wall wall->{
-                    wall=(Wall)wall.clone();
-                    Wall.Height[] heights={
-                        wall.getHeight(BlockFace.NORTH),
-                        wall.getHeight(BlockFace.WEST),
-                        wall.getHeight(BlockFace.SOUTH),
-                        wall.getHeight(BlockFace.EAST),
-                    };
-
-                    int shift=rotation.ordinal();
-                    wall.setHeight(BlockFace.NORTH,heights[shift]);
-                    wall.setHeight(BlockFace.WEST,heights[(1+shift)%4]);
-                    wall.setHeight(BlockFace.SOUTH,heights[(2+shift)%4]);
-                    wall.setHeight(BlockFace.EAST,heights[(3+shift)%4]);
-
-                    yield data.replaceData(wall);
-                }
-                default->data;
-            };
-
-            builder.place(pos.sub(origin).rotate(rotation).add(position), outData);
+                to.addPassenger(from);
+            }
         });
 
-        for(Vec3 pos:Box3.withSize(new Vec3(0,0,0),size)){
-            if(!blocks.containsKey(pos)){
-                builder.place(pos.sub(origin).rotate(rotation).add(position),BlockDat.airData);
+        blocks.forEach((pos, data)->builder.place(
+            pos.rotateAndTranslate(origin, rotation, position),
+            data.rotate(rotation)
+        ));
+
+        if(pasteAir){
+            for(Vec3 pos:roomBox){
+                if(!blocks.containsKey(pos)){
+                    builder.place(pos.sub(origin).rotate(rotation).add(position),BlockDat.airData);
+                }
             }
         }
 
-        entities.forEach((entity)->builder
-            .spawn(entity.pos().sub(origin).rotate(rotation).add(position), entity.data(), ent->{
-                ent.setRotation(ent.getYaw()+rotation.degrees,ent.getPitch());
+        for(int i=0;i<entities.size();i++){
+            EntitySpawnData entity=entities.get(i);
+            final int index=i;
 
-                if(ent instanceof Directional direct){
-                    direct.setFacingDirection(rotation.addTo(direct.getFacing()));
+            builder.spawn(
+                entity.pos().release(origin, rotation, position),
+                entity.data(),
+                entity.sleepPos()!=null?entity.sleepPos().rotateAndTranslate(origin, rotation, position):null,
+                entity.blockLeash()!=null?entity.blockLeash().rotateAndTranslate(origin, rotation, position):null,
+                ent->{
+                    ent.setRotation(ent.getYaw()+rotation.degrees,ent.getPitch());
+
+                    if(ent instanceof Directional direct){
+                        direct.setFacingDirection(rotation.addTo(direct.getFacing()));
+                    }
+
+                    spawned.set(index,ent);
                 }
-            })
-        );
+            );
+        }
+
+        builder.finishFrame();
     }
 
     public static StructureContainer scan(
@@ -177,40 +192,84 @@ public record StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<Ent
         }
 
         List<EntitySpawnData> entities=new ArrayList<>();
+        List<Entity> storedEntity=new ArrayList<>();
+
         for(Entity entity:world.getNearbyEntities(new Box3(begin,end).toBoundingBox())){
             if(unallowedEntityTypes.contains(entity.getType()))continue;
 
             EntitySpawnData data=EntitySpawnData.read(entity);
-            Vec3d local=data.pos().sub(min);
+            EntityPos local=data.pos().makeLocal(min);
+
+            Vec3 localSleepPos;
+            if(data.sleepPos()!=null)localSleepPos=data.sleepPos().sub(min);
+            else localSleepPos=null;
+
             if(entityIterator.check(entity,local)){
-                entities.add(data.replacePosition(local));
+                entities.add(data.replacePositions(local,localSleepPos));
+                storedEntity.add(entity);
+            }
+        }
+
+        Int2IntMap entityLeashMap=new Int2IntArrayMap();
+        Int2IntMap entityRideMap=new Int2IntArrayMap();
+
+        for(int i=0;i<storedEntity.size();i++){
+            Entity entity=storedEntity.get(i);
+
+            leash:if(entity instanceof Leashable leashable){
+                Entity holder;
+                try{
+                    holder=leashable.getLeashHolder();
+                } catch (IllegalStateException e) {
+                    break leash;
+                }
+
+                int holderId=storedEntity.indexOf(holder);
+                if(holderId!=-1){
+                    entityLeashMap.put(i,holderId);
+                }
+            }
+
+            Entity vehicle=entity.getVehicle();
+            if(vehicle!=null){
+                int vehicleId= storedEntity.indexOf(vehicle);
+                if(vehicleId!=-1){
+                    entityRideMap.put(i,vehicleId);
+                }
             }
         }
 
         chunks.forEach(ch->ch.removePluginChunkTicket(DungeonBl.plugin()));
 
-        return new StructureContainer(size.add(new Vec3(1,1,1)),blocks,entities);
+        return new StructureContainer(size.add(new Vec3(1,1,1)),blocks,entities,entityLeashMap,entityRideMap);
     }
 
     public void encode(ReadWriteNBT nbt,boolean encodeEntities) throws StructureSerializeException {
         nbt.setIntArray("size", DBlUtil.vec3ToArray(size));
 
-        if (encodeEntities&&!entities.isEmpty()) {
+        if (encodeEntities&&!entities.isEmpty()){
             ReadWriteNBTCompoundList entityList = nbt.getCompoundList("entities");
             for (EntitySpawnData entry : entities) {
                 ReadWriteNBT out = entityList.addCompound();
+                entry.encode(out);
+            }
 
-                DBlUtil.writeVec3d(entry.pos(), out.getDoubleList("pos"));
-
-                NamespacedKey type;
-                try {
-                    type = entry.data().type().getKey();
-                } catch (IllegalArgumentException e) {
-                    throw new StructureSerializeException("Entity is unidentified", e);
+            if(!entityLeashMap.isEmpty()){
+                IntList ids=new IntArrayList();
+                for(Int2IntMap.Entry entry:entityLeashMap.int2IntEntrySet()){
+                    ids.add(entry.getIntKey());
+                    ids.add(entry.getIntValue());
                 }
+                nbt.setIntArray("leashes",ids.toIntArray());
+            }
 
-                out.setString("type", type.asMinimalString());
-                out.set("data", entry.data().nbt(), NBTHandlers.STORE_READABLE_TAG);
+            if(!entityRideMap.isEmpty()){
+                IntList ids=new IntArrayList();
+                for(Int2IntMap.Entry entry:entityRideMap.int2IntEntrySet()){
+                    ids.add(entry.getIntKey());
+                    ids.add(entry.getIntValue());
+                }
+                nbt.setIntArray("rides",ids.toIntArray());
             }
         }
 
@@ -220,9 +279,7 @@ public record StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<Ent
             ReadWriteNBTCompoundList paletteList = nbt.getCompoundList("palette");
             for (BlockDat block : palette) {
                 ReadWriteNBT out=paletteList.addCompound();
-
-                out.setString("state",block.data().getAsString(true));
-                if(block.nbt()!=null)out.set("nbt",block.nbt(),NBTHandlers.STORE_READABLE_TAG);
+                block.encode(out);
             }
 
             BlockMapEncoder encoder = new BlockMapEncoder(size.x(), size.y(), size.z(), palette, blocks);
@@ -232,85 +289,97 @@ public record StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<Ent
 
     public static StructureContainer decode(ReadableNBT nbt,boolean entitiesAllowed) throws StructureSerializeException {
         int[] sizeArr = nbt.getIntArray("size");
-        if (sizeArr == null) throw new StructureSerializeException("\"size\" missed");
+        if (sizeArr == null||sizeArr.length==0) throw new StructureSerializeException("\"size\" missed");
 
         Vec3 size = DBlUtil.arrayToVec3(sizeArr);
         if (size == null || sizeIsInvalid(size)) throw new StructureSerializeException("\"size\" is invalid");
 
-        ReadableNBTList<ReadWriteNBT> entityList = nbt.getCompoundList("entities");
         List<EntitySpawnData> entities = new ArrayList<>();
-        if (entitiesAllowed && entityList != null && !entityList.isEmpty()) {
-            int index = 0;
-            for (ReadWriteNBT entity : entityList) {
-                ReadableNBTList<Double> posArr = entity.getDoubleList("pos");
-                if (posArr == null) throw new StructureSerializeException("Entity " + index + " \"pos\" missed");
+        Int2IntMap leashes = new Int2IntArrayMap();
+        Int2IntMap rides = new Int2IntArrayMap();
 
-                Vec3d pos = DBlUtil.readVec3d(posArr);
-                if (pos == null || pos.x() < 0 || pos.y() < 0 || pos.z() < 0 || pos.x() > size.x() || pos.y() > size.y() || pos.z() > size.z())
-                    throw new StructureSerializeException("Entity " + index + " \"pos\" is invalid");
+        if (entitiesAllowed) {
+            ReadableNBTList<ReadWriteNBT> entityList = nbt.getCompoundList("entities");
 
-                String typeStr = entity.getString("type");
-                if (typeStr == null || typeStr.isEmpty())
-                    throw new StructureSerializeException("Entity " + index + " \"type\" missing");
+            if(entityList != null && !entityList.isEmpty()){
+                int index = 0;
+                for (ReadWriteNBT entity : entityList) {
+                    EntitySpawnData data;
+                    try{
+                        data=EntitySpawnData.decode(entity,size);
+                    }catch(StructureSerializeException e){
+                        throw e.wrapListException("Entity",index);
+                    }
 
-                NamespacedKey typeKey = NamespacedKey.fromString(typeStr);
-                if (typeKey == null)
-                    throw new StructureSerializeException("Entity " + index + " \"type\" is invalid: " + typeStr);
+                    entities.add(data);
+                    index++;
+                }
+            }
 
-                EntityType type = Registry.ENTITY_TYPE.get(typeKey);
-                if (type == null)
-                    throw new StructureSerializeException("Entity " + index + " \"type\" is unknown: " + typeKey);
-                if(unallowedEntityTypes.contains(type))throw
-                    new StructureSerializeException("Entity " + index + " has unallowed \"type\": " + typeKey);
+            int[] leashArr = nbt.getIntArray("leashes");
+            int[] rideArr = nbt.getIntArray("rides");
 
-                ReadWriteNBT data = entity.getCompound("data");
-                if (data == null) data = NBT.createNBTObject();
+            if(leashArr!=null){
+                if(leashArr.length%2!=0)throw new StructureSerializeException("\"leashes\" has invalid size");
 
-                entities.add(new EntitySpawnData(pos, new EntityData(type, data)));
+                int leashCount=leashArr.length/2;
+                for(int i=0;i<leashCount;i++){
+                    int from=leashArr[i*2];
+                    int to=leashArr[i*2+1];
 
-                index++;
+                    if(from>=entities.size()||from<0||to>=entities.size()||to<0)throw
+                        new StructureSerializeException("\"leashes\" element is invalid, leashing unknown entity");
+
+                    leashes.put(from,to);
+                }
+            }
+
+            if(rideArr!=null){
+                if(rideArr.length%2!=0)throw new StructureSerializeException("\"rides\" has invalid size");
+
+                int rideCount=rideArr.length/2;
+                for(int i=0;i<rideCount;i++){
+                    int from=rideArr[i*2];
+                    int to=rideArr[i*2+1];
+
+                    if(from>=entities.size()||from<0||to>=entities.size()||to<0)throw
+                        new StructureSerializeException("\"rides\" element is invalid, riding unknown entity");
+
+                    rides.put(from,to);
+                }
             }
         }
 
         ReadableNBTList<ReadWriteNBT> paletteList = nbt.getCompoundList("palette");
-        Map<Vec3, BlockDat> blocks;
+
+        List<BlockDat> palette;
         if (paletteList != null && !paletteList.isEmpty()) {
-            List<BlockDat> palette = new ArrayList<>();
+            palette=new ArrayList<>();
             int index = 0;
             for (ReadWriteNBT paletteObj : paletteList){
-                String paletteStr=paletteObj.getString("state");
-                if(paletteStr==null||paletteStr.isEmpty())throw
-                    new StructureSerializeException("Block " + index + " \"state\" is missing");
-
-                BlockData data;
-                try {
-                    data = Bukkit.createBlockData(paletteStr);
-                } catch (IllegalArgumentException e) {
-                    throw new StructureSerializeException("Block " + index + " \"state\" is invalid", e);
-                }
-
-                ReadableNBT nbtOut;
-                if(paletteObj.hasTag("nbt", NBTType.NBTTagCompound)){
-                    nbtOut=paletteObj.getCompound("nbt");
-                }else nbtOut=null;
-
+                BlockDat block;
                 try{
-                    palette.add(new BlockDat(data, nbtOut));
-                }catch(RuntimeException e){
-                    throw new StructureSerializeException("Block " + index + " is invalid", e);
+                    block=BlockDat.decode(paletteObj);
+                } catch (StructureSerializeException e) {
+                    throw e.wrapListException("Block",index);
                 }
+                palette.add(block);
 
                 index++;
             }
+        }else palette=null;
 
-            int[] blockArr = nbt.getIntArray("blocks");
-            if (blockArr == null) throw new StructureSerializeException("Palette was given but blocks not");
+        int[] blockArr = nbt.getIntArray("blocks");
+
+        Map<Vec3, BlockDat> blocks;
+        if(blockArr!=null&&blockArr.length!=0){
+            if (palette == null) throw new StructureSerializeException("Block map without palette");
 
             BlockMapDecoder decoder = new BlockMapDecoder(size.x(), size.y(), size.z(), palette, blockArr);
             blocks = decoder.run();
         } else blocks = new HashMap<>();
 
-        return new StructureContainer(size, blocks, entities);
+        return new StructureContainer(size, blocks, entities, leashes, rides);
     }
 
     @FunctionalInterface
@@ -320,6 +389,6 @@ public record StructureContainer(Vec3 size, Map<Vec3, BlockDat> blocks, List<Ent
 
     @FunctionalInterface
     public interface EntityIterator{
-        boolean check(Entity entity,Vec3d local);
+        boolean check(Entity entity,EntityPos local);
     }
 }

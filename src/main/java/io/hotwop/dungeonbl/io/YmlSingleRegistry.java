@@ -38,7 +38,7 @@ public final class YmlSingleRegistry<T> extends DBlRegistry<T>{
     @Override
     public void save() {
         busyLock();
-        logger.info("Saving {}...", name);
+        logger.info("Saving {}", name);
 
         ConfigurationNode node=loader.createNode();
         for(Map.Entry<String,T> entry:map.entrySet()){
@@ -72,7 +72,7 @@ public final class YmlSingleRegistry<T> extends DBlRegistry<T>{
     @Override
     public void load() {
         busyLock();
-        logger.info("Loading {}...", name);
+        logger.info("Loading {}", name);
 
         if(!Files.exists(file)){
             busyUnlock();
@@ -131,5 +131,10 @@ public final class YmlSingleRegistry<T> extends DBlRegistry<T>{
         removeCounter.forEach(this::listenersRemove);
 
         busyUnlock();
+    }
+
+    @Override
+    public void save(String id) {
+        throw new UnsupportedOperationException("Unsupported for yml singleton registry");
     }
 }

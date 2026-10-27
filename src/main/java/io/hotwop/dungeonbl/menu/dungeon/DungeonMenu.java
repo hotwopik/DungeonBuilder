@@ -297,16 +297,19 @@ public final class DungeonMenu extends AbstractSingleInventory {
                     nextRoomDelay
                 );
 
-                DungeonBl.registries().dungeons
-                    .add(name,dungeon);
+                DBlRegistry<Dungeon> registry=DungeonBl.registries().dungeons;
+                registry.add(name,dungeon);
+                registry.save(name);
 
                 player.sendMessage("Saved");
                 close();
             }
             case 8->{
                 if(!delete)return;
-                DungeonBl.registries().dungeons
-                    .remove(name);
+
+                DBlRegistry<Dungeon> registry=DungeonBl.registries().dungeons;
+                registry.remove(name);
+                registry.save(name);
 
                 player.sendMessage("Removed");
                 close();

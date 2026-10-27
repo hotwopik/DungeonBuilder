@@ -81,6 +81,10 @@ public record Box3(
         return new Vec3(x2-x1+1,y2-y1+1,z2-x1+1);
     }
 
+    public int volume(){
+        return (x2-x1+1)*(y2-y1+1)*(z2-x1+1);
+    }
+
     public boolean collides(Box3 other){
         return x1<=other.x2&&y1<=other.y2&&z1<=other.z2&&
             x2>=other.x1&&y2>=other.y1&&z2>=other.z1;

@@ -16,7 +16,6 @@ public final class LocationSerializer implements MarkDataSerializer<Location,Loc
     public static final LocationSerializer instance=new LocationSerializer();
     private LocationSerializer(){}
 
-
     @Override
     public NBTHandler<ReadableNBT> getHandler() {
         return NBTHandlers.STORE_READABLE_TAG;

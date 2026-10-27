@@ -33,6 +33,8 @@ public abstract class DBlRegistry<T>{
     public abstract void save();
     public abstract void load();
 
+    public abstract void save(String id);
+
     public @Nullable T get(String id) {
         return map.get(id);
     }

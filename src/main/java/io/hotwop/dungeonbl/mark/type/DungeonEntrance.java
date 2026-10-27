@@ -1,10 +1,5 @@
 package io.hotwop.dungeonbl.mark.type;
 
-import dev.jorel.commandapi.arguments.IntegerArgument;
-import dev.jorel.commandapi.arguments.TimeArgument;
-import io.hotwop.dungeonbl.DBlCommand;
-import io.hotwop.dungeonbl.DungeonBl;
-import io.hotwop.dungeonbl.mark.codec.ArgumentContext;
 import io.hotwop.dungeonbl.mark.codec.MarkCodec;
 import io.hotwop.dungeonbl.mark.codec.MarkCreator;
 import io.hotwop.dungeonbl.mark.codec.MarkData;
@@ -30,32 +25,25 @@ public final class DungeonEntrance extends Mark<DungeonEntrance>{
         "dungeon_entrance",
         ItemType.ALLAY_SPAWN_EGG,
         ChatColor.AQUA+"Dungeon Entrance",
-        DungeonEntrance.class,
-        ArgumentContext.builder()
-            .define("positive",int.class,int.class,(data,ctx)->data,name->new IntegerArgument(name,0))
-            .define("time",int.class,int.class,(data,ctx)->data, TimeArgument::new)
-            .define("dungeon",String.class,String.class,(str,ctx)->str,name->DBlCommand
-                .stringListArgument(name,"Dungeon",()->DungeonBl.registries().dungeons.idSet(),null)
-            )
-            .build()
+        DungeonEntrance.class
     );
 
     public MarkCodec<DungeonEntrance> markType() {
         return type;
     }
 
-    public final @MarkData(argument="positive",lore="§7Radius: §e%s") int radius;
-    public final @MarkData(argument="time",lore="§7Time: §e%s ticks") int time;
-    public final @MarkData(argument="positive",lore="§7Minimum player count: §e%s",optional=true) int min;
-    public final @MarkData(argument="positive",lore="§7Maximum player count: §e%s",optional=true) int max;
-    public final @MarkData(argument="dungeon",lore="§7Dungeon: §e%s") String dungeon;
+    public final @MarkData(argument="PositiveDouble",lore="§7Radius: §e%s") double radius;
+    public final @MarkData(argument="Time",lore="§7Time: §e%s ticks") int time;
+    public final @MarkData(argument="PositiveInt",lore="§7Minimum player count: §e%s",optional=true) int min;
+    public final @MarkData(argument="PositiveInt",lore="§7Maximum player count: §e%s",optional=true) int max;
+    public final @MarkData(argument="DungeonId",lore="§7Dungeon: §e%s") String dungeon;
     public final @MarkData(lore="§7Exit: §e%s") Location exit;
 
     private final List<EntranceTimer> timers=new ArrayList<>();
     private final Vector center;
 
     @MarkCreator({"radius","time","min","max","dungeon","exit"})
-    private DungeonEntrance(Location location,int radius,int time,int min,int max,String dungeon,Location exit){
+    private DungeonEntrance(Location location,double radius,int time,int min,int max,String dungeon,Location exit){
         super(location, DungeonEntrance.class);
 
         center=location.toVector().add(new Vector(.5,0,.5));

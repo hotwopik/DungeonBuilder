@@ -38,7 +38,6 @@ permissions:
       dungeonbl.command.items: true
       dungeonbl.command.mob: true
       dungeonbl.command.reload: true
-      dungeonbl.command.save: true
 
   dungeonbl.command.session:
     description: "Session control"
@@ -52,8 +51,6 @@ permissions:
       description: "Mob command"
   dungeonbl.command.reload:
     description: "Reload command"
-  dungeonbl.command.save:
-    description: "Save command"
 
   dungeonbl.enter_dungeon:
     description: "Allow to get in sessions"

@@ -5,10 +5,6 @@ import org.bukkit.World;
 import org.bukkit.util.Vector;
 
 public record Vec3(int x, int y, int z) implements AsVec{
-    public Vec3(int x, int y, int z, SideRotation rotation){
-        this(x*rotation.cos+z*rotation.sin,y,z*rotation.cos-x*rotation.sin);
-    }
-
     public Vec3(Location loc){
         this(loc.getBlockX(),loc.getBlockY(),loc.getBlockZ());
     }
@@ -51,7 +47,7 @@ public record Vec3(int x, int y, int z) implements AsVec{
 
 
     public Vec3 rotate(SideRotation rotation){
-        return new Vec3(x,y,z,rotation);
+        return new Vec3(x*rotation.cos+z*rotation.sin,y,z*rotation.cos-x*rotation.sin);
     }
 
 
@@ -96,6 +92,15 @@ public record Vec3(int x, int y, int z) implements AsVec{
         return new Vec3(x/value,y/value,z/value);
     }
 
+    public Vec3 rotateAndTranslate(Vec3 origin,SideRotation rotation,Vec3 position){
+        int x=this.x-origin.x;
+        int z=this.z-origin.z;
+        return new Vec3(
+            x*rotation.cos+z*rotation.sin+position.x,
+            this.y-origin.y+position.y,
+            z*rotation.cos-x*rotation.sin+position.z
+        );
+    }
 
     public static Vec3 min(Vec3 first,Vec3 second){
         return new Vec3(

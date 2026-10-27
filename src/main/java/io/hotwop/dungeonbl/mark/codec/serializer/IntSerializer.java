@@ -9,7 +9,7 @@ import io.hotwop.dungeonbl.mark.codec.MarkDataSerializer;
 import org.bukkit.command.CommandSender;
 import org.jspecify.annotations.NonNull;
 
-public final class IntSerializer implements MarkDataSerializer<Integer,Integer,Integer>{
+public class IntSerializer implements MarkDataSerializer<Integer,Integer,Integer>{
     public static final IntSerializer instance=new IntSerializer();
     public static final NBTHandler<Integer> integerHandler=new NBTHandler<>(){
         @Override
@@ -28,7 +28,7 @@ public final class IntSerializer implements MarkDataSerializer<Integer,Integer,I
         }
     };
 
-    private IntSerializer(){}
+    protected IntSerializer(){}
 
     @Override
     public NBTHandler<Integer> getHandler() {
