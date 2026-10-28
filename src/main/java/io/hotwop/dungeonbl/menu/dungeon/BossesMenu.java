@@ -2,6 +2,7 @@ package io.hotwop.dungeonbl.menu.dungeon;
 
 import io.hotwop.dungeonbl.menu.ButtonPrimitives;
 import io.hotwop.dungeonbl.menu.AbstractSingleInventory;
+import io.hotwop.dungeonbl.menu.list.AbstractListMenu;
 import io.hotwop.dungeonbl.mob.Boss;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @SuppressWarnings("deprecation")
-public final class BossesMenu extends AbstractSingleInventory {
+public final class BossesMenu extends AbstractListMenu {
     public static final Map<BarColor,String> colors=Map.of(
         BarColor.RED,ChatColor.RED+"Red",
         BarColor.PINK,ChatColor.LIGHT_PURPLE+"Pink",
@@ -29,10 +30,6 @@ public final class BossesMenu extends AbstractSingleInventory {
 
     public final RoomMenu root;
 
-    private int currentPage=0;
-    private final ItemStack pagesButton=ItemStack.of(Material.PAPER);
-
-    private int pagesCount;
     private int listSize;
 
     static{
@@ -42,107 +39,82 @@ public final class BossesMenu extends AbstractSingleInventory {
     }
 
     public BossesMenu(RoomMenu root){
-        super("Bosses",3,root.player);
+        super("Bosses",root.player);
         this.root=root;
 
         listSize=root.bosses.size();
-        pagesCount=(listSize-1)/18;
 
-        final ItemMeta pagesButtonMeta=pagesButton.getItemMeta();
-        pagesButtonMeta.setItemName(ButtonPrimitives.pagesName(0));
-        pagesButtonMeta.setLore(ButtonPrimitives.numberControllerLore);
-        pagesButton.setItemMeta(pagesButtonMeta);
-
-        inventory.setItem(18,pagesButton);
         inventory.setItem(19,createButton);
-
         inventory.setItem(26,ButtonPrimitives.doneButton());
 
         updatePage();
     }
 
-    private void updatePage(){
-        boolean emptySlots=pagesCount==currentPage&&(listSize%18!=0||listSize==0);
-        int pageStart=currentPage*18;
-        int pageEnd=pageStart+(emptySlots ? listSize%18 : 18);
-
-        if(emptySlots)for(int i=listSize%18;i<18;++i)inventory.clear(i);
-        if(pageEnd==0)return;
-        for(int i=pageStart;i<pageEnd;++i){
-            final Boss boss=root.bosses.get(i);
-
-            final ItemStack item=ItemStack.of(Material.GOLD_INGOT);
-            final ItemMeta meta=item.getItemMeta();
-
-            meta.setItemName(ChatColor.YELLOW+boss.mob());
-            meta.setLore(bossLore(boss));
-            item.setItemMeta(meta);
-
-            inventory.setItem(i-pageStart,item);
-        }
+    @Override
+    public int getListSize() {
+        return listSize;
     }
 
-    public void click(int slot, ClickType clickType, ItemStack cursorItem){
+    @Override
+    protected ItemStack getItem(int index) {
+        final Boss boss=root.bosses.get(index);
+
+        final ItemStack item=ItemStack.of(Material.GOLD_INGOT);
+        final ItemMeta meta=item.getItemMeta();
+
+        meta.setItemName(ChatColor.YELLOW+boss.mob());
+        meta.setLore(bossLore(boss));
+        item.setItemMeta(meta);
+
+        return item;
+    }
+
+    @Override
+    protected void selectElement(int index, int slot, ItemStack cursorItem) {
         if(cursorItem.getType()!=Material.AIR)return;
-        if(slot>=0&&slot<=17){
-            int index=slot+currentPage*18;
-            if(index>=listSize)return;
-            new BossMenu(
+
+        new BossMenu(
+            player,
+            root.bosses.get(index),
+            this::open,
+            boss->{
+                root.bosses.set(index,boss);
+                updatePage();
+            },
+            ()->{
+                if(listSize%18==1&&currentPage!=0){
+                    currentPage--;
+                    updatePageButton();
+                }
+
+                root.bosses.remove(index);
+                listSize=root.bosses.size();
+
+                updatePage();
+            }
+        );
+    }
+
+    @Override
+    protected void bottomMenu(int index, ClickType clickType, ItemStack cursorItem) {
+        if(cursorItem.getType()!=Material.AIR)return;
+
+        switch(index){
+            case 1->new BossMenu(
                 player,
-                root.bosses.get(index),
+                null,
                 this::open,
                 boss->{
-                    root.bosses.set(index,boss);
+                    root.bosses.add(boss);
+                    listSize=root.bosses.size();
+
                     updatePage();
                 },
-                ()->{
-                    if(listSize%18==1&&currentPage!=0){
-                        --currentPage;
-                        final ItemMeta pageButtonMeta=pagesButton.getItemMeta();
-                        pageButtonMeta.setItemName(ButtonPrimitives.pagesName(currentPage));
-                        pagesButton.setItemMeta(pageButtonMeta);
-
-                        inventory.setItem(18,pagesButton);
-                    }
-
-                    root.bosses.remove(index);
-                    listSize=root.bosses.size();
-                    pagesCount=(listSize-1)/18;
-
-                    updatePage();
-                }
+                null
             );
-        }else{
-            switch(slot){
-                case 18->{
-                    if(currentPage!=pagesCount&&clickType.isLeftClick())++currentPage;
-                    else if(currentPage!=0&& clickType.isRightClick())--currentPage;
-                    else return;
-
-                    final ItemMeta pageButtonMeta=pagesButton.getItemMeta();
-                    pageButtonMeta.setItemName(ButtonPrimitives.pagesName(currentPage));
-                    pagesButton.setItemMeta(pageButtonMeta);
-
-                    inventory.setItem(18,pagesButton);
-                    updatePage();
-                }
-                case 19->new BossMenu(
-                    player,
-                    null,
-                    this::open,
-                    boss->{
-                        root.bosses.add(boss);
-                        listSize=root.bosses.size();
-                        pagesCount=(listSize-1)/18;
-
-                        updatePage();
-                    },
-                    null
-                );
-                case 26->{
-                    root.updateBossButton();
-                    root.open();
-                }
+            case 8->{
+                root.updateBossButton();
+                root.open();
             }
         }
     }

@@ -12,6 +12,7 @@ import io.hotwop.dungeonbl.io.DBlRegistries;
 import io.hotwop.dungeonbl.mark.MarkStorage;
 import io.hotwop.dungeonbl.mark.type.*;
 import io.hotwop.dungeonbl.menu.ButtonPrimitives;
+import io.hotwop.dungeonbl.platform.BukkitPlatform;
 import io.hotwop.dungeonbl.platform.PaperPlatform;
 import io.hotwop.dungeonbl.util.RepeatingAsyncTask;
 import io.hotwop.dungeonbl.versioned.VersionFoundException;
@@ -138,6 +139,8 @@ public final class DungeonBl extends JavaPlugin implements DBlCore{
         }
 
         logger.info("Shutdown all..");
+        // Teleport can't be async at shutdown
+        platformed=new BukkitPlatform();
 
         if(saveTask!=null)saveTask.shutdown();
         DungeonSession.shutdown();
@@ -145,7 +148,6 @@ public final class DungeonBl extends JavaPlugin implements DBlCore{
         logger.info("Saving..");
 
         MarkStorage.saveAll();
-        registries.saveAll();
         playerDataStorage.save();
 
         logger.info("All saved!");

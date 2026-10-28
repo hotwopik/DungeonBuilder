@@ -1,5 +1,7 @@
 package io.hotwop.dungeonbl.io;
 
+import io.hotwop.dungeonbl.DungeonBl;
+import io.hotwop.dungeonbl.structure.StructureSerializeException;
 import org.spongepowered.configurate.ConfigurateException;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.serialize.SerializationException;
@@ -42,6 +44,41 @@ public final class YmlRegistry<T> extends DBlRegistry<T>{
                 .serializers(ser->ser.registerAll(serializers))
             )
             .build();
+    }
+
+    @Override
+    protected void onAdd(String id, T value){
+        DungeonBl.executorService.execute(()->{
+            busyLock();
+
+            try{
+                write(id);
+            } catch (ConfigurateException e) {
+                logger.warn("Error to serialize {} {}", name, id, e);
+            }catch (RuntimeException e) {
+                logger.warn("Unexpected error arrived while serializing {} {}", name, id, e);
+            }
+
+            busyUnlock();
+        });
+    }
+
+    @Override
+    protected void onRemove(String id){
+        DungeonBl.executorService.execute(()->{
+            busyLock();
+
+            try{
+                delete(id);
+                removed.remove(id);
+            }catch(IOException e){
+                logger.warn("Error to delete {} {} file (may be loaded on reload)", name, id, e);
+            }catch (RuntimeException e) {
+                logger.warn("Unexpected error arrived while deleting {} {} file (may be loaded on reload)", name, id, e);
+            }
+
+            busyUnlock();
+        });
     }
 
     @Override

@@ -185,7 +185,6 @@ public final class StructRegistry<T> extends DBlRegistry<T>{
         T value = map.get(id);
         ReadWriteNBT data = encoder.toNBT(value);
         NBT.writeFile(file.toFile(),data);
-        logger.info("File write {}",file);
     }
 
     private void delete(String id) throws IOException {

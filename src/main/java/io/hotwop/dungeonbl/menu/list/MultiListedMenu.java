@@ -13,7 +13,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @SuppressWarnings("deprecation")
-public final class MultiListedMenu<T> extends AbstractSingleInventory {
+public final class MultiListedMenu<T> extends AbstractListMenu {
     private static final Random iconRandom=new Random();
 
     private final List<Material> icons;
@@ -25,10 +25,6 @@ public final class MultiListedMenu<T> extends AbstractSingleInventory {
     private final Runnable openParent;
     private final Consumer<List<T>> updateMultiListed;
 
-    private int currentPage=0;
-    private final ItemStack pagesButton=ItemStack.of(Material.PAPER);
-
-    private final int pagesCount;
     private final int listSize;
 
     public MultiListedMenu(
@@ -48,7 +44,7 @@ public final class MultiListedMenu<T> extends AbstractSingleInventory {
         Runnable openParent,
         Consumer<List<T>> updateMultiListed
     ){
-        super(title,3,player);
+        super(title,player);
         this.list=List.copyOf(list);
         this.selectedList=new ArrayList<>(selectedList);
         this.getName=getName;
@@ -59,14 +55,7 @@ public final class MultiListedMenu<T> extends AbstractSingleInventory {
         this.updateMultiListed = updateMultiListed;
 
         listSize=list.size();
-        pagesCount=(listSize-1)/18;
 
-        final ItemMeta pagesButtonMeta=pagesButton.getItemMeta();
-        pagesButtonMeta.setItemName(ButtonPrimitives.pagesName(0));
-        pagesButtonMeta.setLore(ButtonPrimitives.numberControllerLore);
-        pagesButton.setItemMeta(pagesButtonMeta);
-
-        inventory.setItem(18,pagesButton);
         inventory.setItem(25,ButtonPrimitives.doneButton());
         inventory.setItem(26,ButtonPrimitives.cancelButton());
 
@@ -74,75 +63,65 @@ public final class MultiListedMenu<T> extends AbstractSingleInventory {
         open();
     }
 
-    private void updatePage(){
-        boolean emptySlots=pagesCount==currentPage&&(listSize%18!=0||listSize==0);
-        int pageStart=currentPage*18;
-        int pageEnd=pageStart+(emptySlots ? listSize%18 : 18);
-
-        if(emptySlots)for(int i=listSize%18;i<18;++i)inventory.clear(i);
-        if(pageEnd==0)return;
-        for(int i=pageStart;i<pageEnd;++i){
-            final T listed=list.get(i);
-
-            ItemStack item;
-            if(selectedList.contains(listed))item=ItemStack.of(selected);
-            else item=ItemStack.of(icons.get(iconRandom.nextInt(icons.size())));
-
-            final ItemMeta meta=item.getItemMeta();
-
-            if(getName!=null)meta.setItemName(getName.apply(listed));
-            else meta.setItemName("");
-
-            if(getLore!=null)meta.setLore(List.of(getLore.apply(listed)));
-            if(getName==null&&getLore==null)meta.setHideTooltip(true);
-
-            item.setItemMeta(meta);
-            inventory.setItem(i-pageStart,item);
-        }
+    @Override
+    public int getListSize() {
+        return listSize;
     }
 
-    public void click(int slot, ClickType clickType, ItemStack cursorItem) {
+    @Override
+    protected ItemStack getItem(int index) {
+        T listed=list.get(index);
+
+        ItemStack item;
+        if(selectedList.contains(listed))item=ItemStack.of(selected);
+        else item=ItemStack.of(icons.get(iconRandom.nextInt(icons.size())));
+
+        ItemMeta meta=item.getItemMeta();
+
+        if(getName!=null)meta.setItemName(getName.apply(listed));
+        else meta.setItemName("");
+
+        if(getLore!=null)meta.setLore(List.of(getLore.apply(listed)));
+        if(getName==null&&getLore==null)meta.setHideTooltip(true);
+
+        item.setItemMeta(meta);
+
+        return item;
+    }
+
+    @Override
+    protected void selectElement(int index, int slot, ItemStack cursorItem) {
         if(cursorItem.getType()!=Material.AIR)return;
-        if(slot>=0&&slot<=17){
-            int index=slot+currentPage*18;
-            if(index>=listSize)return;
-            T listed=list.get(index);
-            ItemStack old=inventory.getItem(slot);
-            if(old==null)return;
-            ItemStack item;
 
-            if(selectedList.contains(listed)){
-                selectedList.remove(listed);
-                item=old.withType(icons.get(iconRandom.nextInt(icons.size())));
-            }else{
-                selectedList.add(listed);
-                item=old.withType(selected);
-            }
+        T listed=list.get(index);
+        ItemStack old=inventory.getItem(slot);
+        if(old==null)return;
+        ItemStack item;
 
-            inventory.setItem(slot,item);
+        if(selectedList.contains(listed)){
+            selectedList.remove(listed);
+            item=old.withType(icons.get(iconRandom.nextInt(icons.size())));
         }else{
-            switch(slot){
-                case 18->{
-                    if(currentPage!=pagesCount&&clickType.isLeftClick())++currentPage;
-                    else if(currentPage!=0&& clickType.isRightClick())--currentPage;
-                    else return;
+            selectedList.add(listed);
+            item=old.withType(selected);
+        }
 
-                    final ItemMeta pageButtonMeta=pagesButton.getItemMeta();
-                    pageButtonMeta.setItemName(ButtonPrimitives.pagesName(currentPage));
-                    pagesButton.setItemMeta(pageButtonMeta);
+        inventory.setItem(slot,item);
+    }
 
-                    inventory.setItem(18,pagesButton);
-                    updatePage();
-                }
-                case 25->{
-                    updateMultiListed.accept(selectedList);
-                    close();
-                    openParent.run();
-                }
-                case 26->{
-                    close();
-                    openParent.run();
-                }
+    @Override
+    protected void bottomMenu(int index, ClickType clickType, ItemStack cursorItem) {
+        if(cursorItem.getType()!=Material.AIR)return;
+
+        switch (index){
+            case 7->{
+                updateMultiListed.accept(selectedList);
+                close();
+                openParent.run();
+            }
+            case 8->{
+                close();
+                openParent.run();
             }
         }
     }

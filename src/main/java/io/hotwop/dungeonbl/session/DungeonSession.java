@@ -78,7 +78,6 @@ public final class DungeonSession{
     private static final Path dungeonsFolder= Bukkit.getWorldContainer().toPath().resolve("dungeons");
 
     public static final NamespacedKey dungeonWorldField=new NamespacedKey(DungeonBl.namespace,"dungeon_world");
-    public static final NamespacedKey rewardStorageFiled=new NamespacedKey(DungeonBl.namespace,"reward");
 
     private static int worldId=0;
 

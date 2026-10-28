@@ -20,7 +20,8 @@ public final class DBlVersioned{
         4082,"1_21_3",
         4554,"1_21_9",
         4671,"1_21_11",
-        4786,"26_1"
+        4786,"26_1",
+        4903,"26_2"
     );
 
     @SuppressWarnings("deprecation")
