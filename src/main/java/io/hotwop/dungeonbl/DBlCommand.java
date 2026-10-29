@@ -11,10 +11,7 @@ import io.hotwop.dungeonbl.mark.MarkType;
 import io.hotwop.dungeonbl.menu.dungeon.DungeonMenu;
 import io.hotwop.dungeonbl.mob.Mob;
 import io.hotwop.dungeonbl.session.DungeonSession;
-import io.hotwop.dungeonbl.structure.Decoration;
-import io.hotwop.dungeonbl.structure.Doorway;
-import io.hotwop.dungeonbl.structure.RoomBuilding;
-import io.hotwop.dungeonbl.structure.StructureScanException;
+import io.hotwop.dungeonbl.structure.*;
 import io.hotwop.dungeonbl.structure.builder.OneTimeBuilder;
 import io.hotwop.dungeonbl.util.math.SideRotation;
 import io.hotwop.dungeonbl.util.math.Vec3;
@@ -162,6 +159,14 @@ public final class DBlCommand{
             sender.sendMessage("Reloading...");
         });
 
+    public static final CommandAPICommand wandCommand=new CommandAPICommand("wand")
+        .withPermission("dungeonbl.wand")
+        .executesPlayer((player,args)->{
+            if(!DBlUtil.giveIfCan(player, SelectionWand.getWandItem())){
+                player.sendMessage(ChatColor.RED+"Unable to give wand, inventory is full");
+            }
+        });
+
     public static final CommandAPICommand buildingCommand=new CommandAPICommand("building")
         .withPermission("dungeonbl.command.build")
         .withSubcommands(
@@ -180,6 +185,7 @@ public final class DBlCommand{
             buildingCommand,
             MobCommand.root,
             reloadCommand,
+            wandCommand,
             MarkType.collectCommand()
         );
 
@@ -441,7 +447,12 @@ public final class DBlCommand{
 
                 if(!DBlRegistry.validId.test(name))throw CommandAPI.failWithString("Invalid id: "+name);
 
-                Decoration decoration=Decoration.scan(from.getWorld(),new Vec3(from),new Vec3(to));
+                Decoration decoration;
+                try{
+                    decoration=Decoration.scan(from.getWorld(),new Vec3(from),new Vec3(to));
+                }catch(StructureScanException e){
+                    throw CommandAPI.failWithString("Decoration is invalid: "+e.getMessage());
+                }
 
                 DungeonBl.registries().decorations
                     .add(name,decoration);

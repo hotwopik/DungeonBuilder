@@ -28,7 +28,7 @@ public record Decoration(StructureContainer container, Vec3 origin, SideRotation
         return container.size();
     }
 
-    public static Decoration scan(World world, Vec3 begin, Vec3 end){
+    public static Decoration scan(World world, Vec3 begin, Vec3 end) throws StructureScanException{
         ThreadLocal<Vec3> origin=new ThreadLocal<>();
         ThreadLocal<SideRotation> rotation=new ThreadLocal<>();
 
@@ -45,7 +45,12 @@ public record Decoration(StructureContainer container, Vec3 origin, SideRotation
             (entity,local)->false
         );
 
-        return new Decoration(container,origin.get(),rotation.get());
+        Vec3 originValue=origin.get();
+        SideRotation rotationValue=rotation.get();
+
+        if(originValue==null||rotationValue==null)throw new StructureScanException("Origin is not set");
+
+        return new Decoration(container,originValue,rotationValue);
     }
 
     public void place(Vec3 position, SideRotation rotation, WorldBuilder builder){

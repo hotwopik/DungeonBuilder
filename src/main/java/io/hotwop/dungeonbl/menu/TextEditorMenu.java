@@ -26,13 +26,13 @@ public final class TextEditorMenu extends AbstractView<AnvilView>{
     private final Runnable openParent;
     private final String startName;
 
-    public TextEditorMenu(String title, String value, Player player, Consumer<String> setter, Runnable openParent) {
+    public TextEditorMenu(String title, String value, Material item, Player player, Consumer<String> setter, Runnable openParent) {
         super(title,MenuType.ANVIL,player);
         this.setter = setter;
         this.openParent = openParent;
         startName=value==null?ChatColor.BLACK.toString():value;
 
-        ItemStack renameItem=ItemStack.of(Material.LIME_STAINED_GLASS_PANE);
+        ItemStack renameItem=ItemStack.of(item);
         ItemMeta meta=renameItem.getItemMeta();
         meta.setItemName(startName);
         meta.setLore(itemLore);

@@ -34,6 +34,8 @@ public final class BossMenu extends AbstractSingleInventory {
 
     public BossMenu(Player player, @Nullable Boss boss, Runnable openParent, Consumer<Boss> set, Runnable del){
         super("Change Boss",3,player);
+        if(!player.hasPermission("dungeonbl.command.dungeon"))throw new RuntimeException("Permission exception");
+
         this.openParent = openParent;
         this.set = set;
         this.del = del;

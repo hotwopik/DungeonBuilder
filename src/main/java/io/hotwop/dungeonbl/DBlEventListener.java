@@ -11,7 +11,7 @@ import io.hotwop.dungeonbl.mark.MarkType;
 import io.hotwop.dungeonbl.mark.type.DungeonChest;
 import io.hotwop.dungeonbl.menu.AbstractInventory;
 import io.hotwop.dungeonbl.menu.AbstractView;
-import io.hotwop.dungeonbl.menu.mark.DungeonRewardMenu;
+import io.hotwop.dungeonbl.menu.other.DungeonRewardMenu;
 import io.hotwop.dungeonbl.session.DungeonSession;
 import io.hotwop.dungeonbl.session.DungeonSuccess;
 import org.bukkit.Location;

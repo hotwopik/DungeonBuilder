@@ -1,9 +1,7 @@
-package io.hotwop.dungeonbl.menu.mark;
+package io.hotwop.dungeonbl.menu.other;
 
 import io.hotwop.dungeonbl.DBlUtil;
 import io.hotwop.dungeonbl.DungeonBl;
-import io.hotwop.dungeonbl.menu.ButtonPrimitives;
-import io.hotwop.dungeonbl.menu.AbstractSingleInventory;
 import io.hotwop.dungeonbl.menu.list.AbstractListMenu;
 import org.bukkit.*;
 import org.bukkit.entity.Player;

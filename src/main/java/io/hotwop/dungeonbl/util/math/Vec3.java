@@ -5,6 +5,13 @@ import org.bukkit.World;
 import org.bukkit.util.Vector;
 
 public record Vec3(int x, int y, int z) implements AsVec{
+    public static final Vec3 ZERO=new Vec3(0,0,0);
+    public static final Vec3 ONE=new Vec3(1,1,1);
+
+    public static final Vec3 X=new Vec3(1,0,0);
+    public static final Vec3 Y=new Vec3(0,1,0);
+    public static final Vec3 Z=new Vec3(0,0,1);
+
     public Vec3(Location loc){
         this(loc.getBlockX(),loc.getBlockY(),loc.getBlockZ());
     }

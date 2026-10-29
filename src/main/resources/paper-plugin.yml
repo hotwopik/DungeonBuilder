@@ -29,6 +29,7 @@ permissions:
       dungeonbl.enter_dungeon: true
       dungeonbl.admin_vision: true
       dungeonbl.log: true
+      dungeonbl.wand: true
   dungeonbl.command.*:
     description: "All DungeonBuilder command permissions"
     children:
@@ -48,7 +49,7 @@ permissions:
   dungeonbl.command.items:
     description: "Items command"
   dungeonbl.command.mob:
-      description: "Mob command"
+    description: "Mob command"
   dungeonbl.command.reload:
     description: "Reload command"
 
@@ -59,3 +60,5 @@ permissions:
     description: "Allow to see marks"
   dungeonbl.log:
     description: "Allow to see DungeonBuilder log"
+  dungeonbl.wand:
+    description: "Allow to use selection wand"

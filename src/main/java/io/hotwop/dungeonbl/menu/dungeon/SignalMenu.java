@@ -68,6 +68,7 @@ public final class SignalMenu extends AbstractSingleInventory {
                     new TextEditorMenu(
                         "Signal Name",
                         parent.endsOnSignal,
+                        Material.BELL,
                         player,
                         value->{
                             if(value.isEmpty())parent.endsOnSignal=null;

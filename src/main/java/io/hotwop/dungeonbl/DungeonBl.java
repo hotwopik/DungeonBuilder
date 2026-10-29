@@ -14,6 +14,7 @@ import io.hotwop.dungeonbl.mark.type.*;
 import io.hotwop.dungeonbl.menu.ButtonPrimitives;
 import io.hotwop.dungeonbl.platform.BukkitPlatform;
 import io.hotwop.dungeonbl.platform.PaperPlatform;
+import io.hotwop.dungeonbl.structure.SelectionWand;
 import io.hotwop.dungeonbl.util.RepeatingAsyncTask;
 import io.hotwop.dungeonbl.versioned.VersionFoundException;
 import io.hotwop.dungeonbl.versioned.VersionedInterface;
@@ -113,7 +114,7 @@ public final class DungeonBl extends JavaPlugin implements DBlCore{
         registries.loadAll();
         playerDataStorage.load();
 
-        server.getScheduler().runTask(this,()->{
+        scheduler.runTask(this,()->{
             MarkStorage.loadAll();
             loadingEnded=true;
         });
@@ -121,6 +122,9 @@ public final class DungeonBl extends JavaPlugin implements DBlCore{
         logger.info("Loaded!");
 
         pluginManager.registerEvents(new DBlEventListener(),this);
+        pluginManager.registerEvents(new SelectionWand(),this);
+
+        scheduler.scheduleSyncRepeatingTask(this,SelectionWand::renderTick,1,1);
 
         int markSaveDelay=config.get().saveTimer();
         if(markSaveDelay>0) saveTask =new RepeatingAsyncTask(

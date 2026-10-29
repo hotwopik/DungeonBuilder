@@ -78,7 +78,7 @@ public record Box3(
     }
 
     public Vec3 size(){
-        return new Vec3(x2-x1+1,y2-y1+1,z2-x1+1);
+        return new Vec3(x2-x1+1,y2-y1+1,z2-z1+1);
     }
 
     public int volume(){
@@ -86,13 +86,13 @@ public record Box3(
     }
 
     public boolean collides(Box3 other){
-        return x1<=other.x2&&y1<=other.y2&&z1<=other.z2&&
-            x2>=other.x1&&y2>=other.y1&&z2>=other.z1;
+        return x1<=other.x2 && y1<=other.y2 && z1<=other.z2 &&
+               x2>=other.x1 && y2>=other.y1 && z2>=other.z1;
     }
 
     public boolean collides(BoundingBox other){
-        return x1<=(int)other.getMaxX() && y1<=(int)other.getMaxY() && z1<=(int)other.getMaxZ() &&
-            x2>=(int)other.getMinX() && y2>=(int)other.getMinY() && z2>=(int)other.getMinZ();
+        return x1<=other.getMaxX() && y1<=other.getMaxY() && z1<=other.getMaxZ() &&
+               x2>=other.getMinX() && y2>=other.getMinY() && z2>=other.getMinZ();
     }
 
     public BoundingBox toBoundingBox(){
